@@ -6,6 +6,9 @@ import { map, filter } from "rxjs/operators"
 import "normalize.css/normalize.css"
 import { ViewPort, Buffer, Runway, Page } from "./components"
 import { FF_MULTIPLIER, PAGING_ENABLED, MAX_PAGE_BUFFER } from "./settings"
+import createDataSource from "./dataSource"
+
+const dataSource = createDataSource()
 
 const d = (...args) => console.debug(...args)
 
@@ -103,23 +106,13 @@ class VirtualList extends React.Component {
 
   getPrevPage = currentPage => {
     d("Requesting page before", currentPage)
-    const id = _.uniqueId()
-    return runAsync(() => ({
-      id,
-      name: `page-${id}`,
-      children: `Page #${id}`
-    }))
+    return runAsync(() => dataSource.pop())
   }
 
   getNextPage = currentPage => {
     return Promise.resolve(null)
     d("Requesting page after", currentPage)
-    const id = _.uniqueId()
-    return runAsync(() => ({
-      id,
-      name: `page-${id}`,
-      children: `Page #${id}`
-    }))
+    return runAsync(() => dataSource.pop())
   }
 
   handleIntersection = entries =>
@@ -187,7 +180,12 @@ class VirtualList extends React.Component {
           <Runway id="runway">
             <Buffer top id="buffer-top" />
             {pages.map(page => (
-              <Page key={page.id} id={page.id} className={page.name}>
+              <Page
+                key={page.id}
+                id={page.id}
+                className={page.name}
+                cards={page.cards}
+              >
                 {page.children}
               </Page>
             ))}

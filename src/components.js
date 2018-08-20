@@ -1,5 +1,4 @@
 import React from "react"
-import faker from "faker"
 import _ from "lodash"
 export const PAGE_HEIGHT = "auto"
 
@@ -43,89 +42,96 @@ export const Runway = props => {
   )
 }
 
-export const Page = props => (
-  <div
-    {...props}
-    style={{
-      border: "dashed 2px blue",
-      margin: "10px 0",
-      background: "linear-gradient(white, gray)",
-      height: PAGE_HEIGHT,
-      ...props.style
-    }}
-  >
-    {_.map(_.range(1, _.random(4, false)), item => (
-      <Card key={item} />
-    ))}
-  </div>
-)
+export class Page extends React.Component {
+  render() {
+    return (
+      <div
+        {...this.props}
+        style={{
+          border: "dashed 2px blue",
+          margin: "10px 0",
+          background: "linear-gradient(white, gray)",
+          height: PAGE_HEIGHT,
+          ...this.props.style
+        }}
+      >
+        {_.map(this.props.cards, item => (
+          <Card key={item.id} card={item.card} image={item.image} />
+        ))}
+      </div>
+    )
+  }
+}
 
-export const Card = props => {
-  const card = faker.helpers.createCard()
-  const image = faker.image.avatar()
-  const data = _.head(card.posts)
-  return (
-    <div
-      className="card"
-      {...props}
-      style={{
-        display: "grid",
-        border: "dashed 1px red",
-        gridTemplateColumns: "80px auto auto",
-        gridTemplateAreas:
-          '"avatar name name" "avatar email phone" "avatar message message"',
-        fontFamily: "'San Francisco', 'Segoe UI', Tahoma",
-        backgroundColor: "#F4F4F4",
-        ...props.style
-      }}
-    >
-      <img
-        src={image}
+export class Card extends React.PureComponent {
+  render() {
+    if (!this.props.card) {
+      return null
+    }
+    const data = _.head(this.props.card.posts)
+    return (
+      <div
+        className="card"
+        {...this.props}
         style={{
-          gridArea: "avatar",
-          width: "60px",
-          height: "60px",
-          margin: "25px 10px 10px",
-          borderRadius: "50%"
-        }}
-      />
-      <h1
-        style={{
-          gridArea: "name",
-          marginBottom: "8px",
-          fontWeight: 200
+          display: "grid",
+          border: "dashed 1px red",
+          gridTemplateColumns: "80px auto auto",
+          gridTemplateAreas:
+            '"avatar name name" "avatar email phone" "avatar message message"',
+          fontFamily: "'San Francisco', 'Segoe UI', Tahoma",
+          backgroundColor: "#F4F4F4",
+          ...this.props.style
         }}
       >
-        {card.name}
-      </h1>
-      <a
-        style={{
-          gridArea: "email",
-          margin: 0
-        }}
-        href="#"
-      >
-        {card.email}
-      </a>
-      <p
-        style={{
-          gridArea: "phone",
-          margin: "0px"
-        }}
-      >
-        {card.phone}
-      </p>
-      <p
-        style={{
-          gridArea: "message"
-        }}
-      >
-        <span style={{ fontWeight: 600, display: "block" }}>
-          {data.sentence}
-        </span>
-        <br />
-        {data.paragraph}
-      </p>
-    </div>
-  )
+        <img
+          src={this.props.image}
+          style={{
+            gridArea: "avatar",
+            width: "60px",
+            height: "60px",
+            margin: "25px 10px 10px",
+            borderRadius: "50%"
+          }}
+        />
+        <h1
+          style={{
+            gridArea: "name",
+            marginBottom: "8px",
+            fontWeight: 200
+          }}
+        >
+          {this.props.card.name}
+        </h1>
+        <a
+          style={{
+            gridArea: "email",
+            margin: 0
+          }}
+          href="#"
+        >
+          {this.props.card.email}
+        </a>
+        <p
+          style={{
+            gridArea: "phone",
+            margin: "0px"
+          }}
+        >
+          {this.props.card.phone}
+        </p>
+        <p
+          style={{
+            gridArea: "message"
+          }}
+        >
+          <span style={{ fontWeight: 600, display: "block" }}>
+            {data.sentence}
+          </span>
+          <br />
+          {data.paragraph}
+        </p>
+      </div>
+    )
+  }
 }
