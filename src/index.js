@@ -1,16 +1,16 @@
 import React from "react"
 import ReactDOM from "react-dom"
 import _ from "lodash"
-
+import { fromEvent } from "rxjs"
+import { map, filter } from "rxjs/operators"
 import "normalize.css/normalize.css"
+import { ViewPort, Buffer, Runway, Page } from "./components"
+import { FF_MULTIPLIER, PAGING_ENABLED, MAX_PAGE_BUFFER } from "./settings"
 
-const PAGE_HEIGHT = 700
-const PAGING_ENABLED = true
-const ANCHORS_ENABLED = true
+const d = (...args) => console.debug(...args)
 
 // TODO
 //
-// Fix bug with initial scroll up not loading previous page
 // Recycling
 // dynamic page height
 
@@ -21,75 +21,12 @@ const ANCHORS_ENABLED = true
 //   all perf tests 60 fps
 //   scroll updates are sub millisecond (0.2ms etc)
 
-const ViewPort = props => (
-  <div
-    {...props}
-    style={{
-      overflow: "hidden",
-      border: "8px solid black",
-      height: PAGE_HEIGHT,
-      ...props.style
-    }}
-  />
-)
-
-const Buffer = ({ top, bottom, style, ...rest }) => (
-  <div
-    style={{
-      background: `linear-gradient(${
-        top ? "lightgreen, cyan" : "lightgreen, green"
-      })`,
-      height: PAGE_HEIGHT,
-      ...style
-    }}
-    {...rest}
-  >
-    {top ? "TOP" : bottom ? "bottom" : ""} BUFFER
-  </div>
-)
-
-const Runway = props => {
-  return (
-    <div
-      {...props}
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        ...props.style
-      }}
-    />
-  )
-}
-
-const Page = props => (
-  <div
-    style={{
-      background: "linear-gradient(white, gray)",
-      height: PAGE_HEIGHT,
-      ...props.style
-    }}
-  >
-    {props.children || "Page"}
-  </div>
-)
-const ScrollAnchor = ({ style, children, ...rest }) => (
-  <div
-    style={{
-      background: "red",
-      height: PAGE_HEIGHT,
-      ...style
-    }}
-    className="scroll-anchor"
-    {...rest}
-  >
-    {children || "ANCHOR"}
-  </div>
-)
-
-class App extends React.Component {
-  canScrollUp = true
-  canScrollDown = true
-  runwayY = -PAGE_HEIGHT
+class VirtualList extends React.Component {
+  runwayY = 0
+  scrollStatus = {
+    canScrollUp: true,
+    canScrollDown: true
+  }
 
   state = {
     pages: []
@@ -101,66 +38,7 @@ class App extends React.Component {
   }
 
   componentWillUnmount() {
-    this.viewport.removeEventListener(
-      this.isFF ? "DOMMouseScroll" : "mousewheel",
-      this.handleViewPortMouseWheel
-    )
-  }
-
-  addBufferIntersectionObservers = () => {
-    this.bufferObserver = new IntersectionObserver(this.handleIntersection, {
-      root: this.viewport,
-      rootMargin: "0px"
-    })
-
-    this.bufferObserver.observe(this.bufferTop)
-    this.bufferObserver.observe(this.bufferBottom)
-    this.scrollAnchors.forEach(scrollAnchor => {
-      this.bufferObserver.observe(scrollAnchor)
-    })
-  }
-
-  getPrevPage = () => {
-    const id = _.uniqueId()
-    return <Page key={id}>Prev Page (id: {id})</Page>
-  }
-
-  getNextPage = () => {
-    const id = _.uniqueId()
-    return <Page key={id}>Next Page (id: {id})</Page>
-  }
-
-  handleIntersection = entries => {
-    console.log(entries)
-    entries.forEach(entry => {
-      if (entry.target.id === "scroll-anchor-top") {
-        this.canScrollUp = !entry.isIntersecting
-      }
-      if (entry.target.id === "scroll-anchor-bottom") {
-        this.canScrollDown = !entry.isIntersecting
-      }
-    })
-
-    console.log({
-      canScrollUp: this.canScrollUp,
-      canScrollDown: this.canScrollDown
-    })
-
-    if (!PAGING_ENABLED) return
-
-    const buferEntry = entries.find(({ isIntersecting }) => isIntersecting)
-    if (!buferEntry) return
-
-    const isTop = buferEntry.target.id === "buffer-top"
-    const pages = isTop
-      ? [this.getPrevPage(), ...this.state.pages]
-      : [...this.state.pages, this.getNextPage()]
-
-    console.log("new pages", ...pages)
-
-    this.setState({ pages }, () => {
-      if (isTop) this.updateRunwayY(-PAGE_HEIGHT)
-    })
+    this.subscription$ && this.subscription$.unsubscribe()
   }
 
   setup = () => {
@@ -168,47 +46,137 @@ class App extends React.Component {
     this.runway = document.getElementById("runway")
     this.bufferTop = document.getElementById("buffer-top")
     this.bufferBottom = document.getElementById("buffer-bottom")
-    this.scrollAnchors = document.querySelectorAll(".scroll-anchor")
 
     if (this.isFF) {
       // try to fix jitter
       this.runway.style.transition = "transform 50ms ease-in-out"
     }
 
-    this.updateRunwayY()
-    this.addEventListeners()
+    this.updateRunwayY(-this.bufferTop.offsetHeight)
+    this.subscribeToScrollEvents()
     this.addBufferIntersectionObservers()
   }
 
-  addEventListeners = () => {
-    this.viewport.addEventListener(
+  subscribeToScrollEvents() {
+    this.subscription$ = fromEvent(
+      this.viewport,
       this.isFF ? "DOMMouseScroll" : "mousewheel",
-      this.handleViewPortMouseWheel
+      {
+        passive: true
+      }
     )
+      .pipe(
+        map(event => {
+          const delta = event.wheelDelta || -(event.detail * FF_MULTIPLIER)
+          const goingUp = delta >= 0
+          return { delta, goingUp, event }
+        }),
+        filter(({ goingUp }) => {
+          if (!this.scrollStatus.canScrollUp && goingUp) {
+            return false
+          }
+          if (!this.scrollStatus.canScrollDown && !goingUp) {
+            return false
+          }
+          return true
+        })
+      )
+      .subscribe(next => this.updateRunwayY(next.delta))
   }
 
-  updateRunwayY = (delta = 0) => {
-    console.log("updateRunwayY", delta)
-    this.runwayY = this.runwayY + delta
+  addBufferIntersectionObservers = () => {
+    this.bufferObserver = new IntersectionObserver(this.handleIntersection, {
+      rootMargin: "150px 0px",
+      threshold: [0, 0.25, 0.5, 0.75, 1]
+    })
 
+    this.bufferObserver.observe(this.bufferTop)
+    this.bufferObserver.observe(this.bufferBottom)
+  }
+
+  updateRunwayY = (delta = 0, force = false) => {
+    this.runwayY = force ? delta : this.runwayY + delta
     requestAnimationFrame(() => {
       this.runway.style.transform = `translate3d(0, ${this.runwayY}px, 0)`
     })
   }
 
-  handleViewPortMouseWheel = e => {
-    e.preventDefault()
-
-    const delta = this.isFF ? -e.detail * (PAGE_HEIGHT * 0.05) : e.wheelDelta
-    const isUp = delta >= 0
-    const isDown = !isUp
-
-    if (!ANCHORS_ENABLED) {
-      this.updateRunwayY(delta)
-    } else if ((isUp && this.canScrollUp) || (isDown && this.canScrollDown)) {
-      this.updateRunwayY(delta)
-    }
+  getPrevPage = currentPage => {
+    d("Requesting page before", currentPage)
+    const id = _.uniqueId()
+    return runAsync(() => ({
+      id,
+      name: `page-${id}`,
+      children: `Page #${id}`
+    }))
   }
+
+  getNextPage = currentPage => {
+    return Promise.resolve(null)
+    d("Requesting page after", currentPage)
+    const id = _.uniqueId()
+    return runAsync(() => ({
+      id,
+      name: `page-${id}`,
+      children: `Page #${id}`
+    }))
+  }
+
+  handleIntersection = entries =>
+    _(entries)
+      .map(entry => {
+        const id = _.get(entry, "target.id")
+        const isTopBuffer = id === "buffer-top"
+        const isIntersecting = entry.intersectionRatio > 0.05
+        const shouldPauseScrolling = entry.intersectionRatio > 0.2
+
+        this.scrollStatus = {
+          canScrollUp: isTopBuffer
+            ? !shouldPauseScrolling
+            : this.scrollStatus.canScrollUp,
+          canScrollDown: !isTopBuffer
+            ? !shouldPauseScrolling
+            : this.scrollStatus.canScrollDown
+        }
+
+        const data = {
+          id,
+          isIntersecting,
+          isTopBuffer,
+          intersectionRatio: entry.intersectionRatio,
+          clientRect: entry.boundingClientRect,
+          intersectionRect: entry.intersectionRect
+        }
+        return data
+      })
+      .filter(({ isIntersecting }) => isIntersecting)
+      .each(
+        async ({ id, isTopBuffer, intersectionRect, intersectionRatio }) => {
+          d(id, intersectionRatio)
+
+          if (!PAGING_ENABLED) return
+
+          const page = isTopBuffer
+            ? await this.getPrevPage(_.head(this.state.pages))
+            : await this.getNextPage(_.last(this.state.pages))
+
+          if (!page) {
+            return
+          }
+
+          const pages = isTopBuffer
+            ? [page, ..._.take(this.state.pages, MAX_PAGE_BUFFER)]
+            : [..._.takeRight(this.state.pages, MAX_PAGE_BUFFER), page]
+
+          this.setState({ pages }, () => {
+            this.updateRunwayY(
+              isTopBuffer
+                ? -intersectionRect.bottom
+                : this.viewport.clientHeight - intersectionRect.top
+            )
+          })
+        }
+      )
 
   render() {
     const { pages } = this.state
@@ -217,11 +185,13 @@ class App extends React.Component {
       <div>
         <ViewPort id="viewport">
           <Runway id="runway">
-            <ScrollAnchor id="scroll-anchor-top" />
             <Buffer top id="buffer-top" />
-            {pages}
+            {pages.map(page => (
+              <Page key={page.id} id={page.id} className={page.name}>
+                {page.children}
+              </Page>
+            ))}
             <Buffer bottom id="buffer-bottom" />
-            <ScrollAnchor id="scroll-anchor-bottom" />
           </Runway>
         </ViewPort>
       </div>
@@ -230,4 +200,7 @@ class App extends React.Component {
 }
 
 const rootElement = document.getElementById("root")
-ReactDOM.render(<App />, rootElement)
+ReactDOM.render(<VirtualList />, rootElement)
+
+const runAsync = (cb, timer = 0) =>
+  new Promise(resolve => setTimeout(() => resolve(cb()), timer))
