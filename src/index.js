@@ -67,7 +67,7 @@ class VirtualList extends React.Component {
     )
       .pipe(
         map(event => {
-          const delta = event.wheelDelta || event.detail * FF_MULTIPLIER
+          const delta = event.wheelDelta || -(event.detail * FF_MULTIPLIER)
           const goingUp = delta >= 0
           return { delta, goingUp, event }
         }),
@@ -86,7 +86,7 @@ class VirtualList extends React.Component {
 
   addBufferIntersectionObservers = () => {
     this.bufferObserver = new IntersectionObserver(this.handleIntersection, {
-      root: this.viewport,
+      rootMargin: "150px 0px",
       threshold: [0, 0.25, 0.5, 0.75, 1]
     })
 
@@ -104,21 +104,22 @@ class VirtualList extends React.Component {
   getPrevPage = currentPage => {
     d("Requesting page before", currentPage)
     const id = _.uniqueId()
-    return {
+    return runAsync(() => ({
       id,
       name: `page-${id}`,
       children: `Page #${id}`
-    }
+    }))
   }
 
   getNextPage = currentPage => {
+    return Promise.resolve(null)
     d("Requesting page after", currentPage)
     const id = _.uniqueId()
-    return {
+    return runAsync(() => ({
       id,
       name: `page-${id}`,
       children: `Page #${id}`
-    }
+    }))
   }
 
   handleIntersection = entries =>
@@ -143,48 +144,39 @@ class VirtualList extends React.Component {
           isIntersecting,
           isTopBuffer,
           intersectionRatio: entry.intersectionRatio,
-          clientRect: entry.boundingClientRect
+          clientRect: entry.boundingClientRect,
+          intersectionRect: entry.intersectionRect
         }
         return data
       })
       .filter(({ isIntersecting }) => isIntersecting)
-      .each(({ id, isTopBuffer, clientRect, intersectionRatio }) => {
-        d(
-          id,
-          intersectionRatio,
-          isTopBuffer ? clientRect.bottom : clientRect.top
-        )
+      .each(
+        async ({ id, isTopBuffer, intersectionRect, intersectionRatio }) => {
+          d(id, intersectionRatio)
 
-        if (!PAGING_ENABLED) return
+          if (!PAGING_ENABLED) return
 
-        const head = _.head(this.state.pages)
-        const tail = _.last(this.state.pages)
+          const page = isTopBuffer
+            ? await this.getPrevPage(_.head(this.state.pages))
+            : await this.getNextPage(_.last(this.state.pages))
 
-        const pages = isTopBuffer
-          ? [
-              this.getPrevPage(head),
-              ..._.take(this.state.pages, MAX_PAGE_BUFFER)
-            ]
-          : [
-              ..._.takeRight(this.state.pages, MAX_PAGE_BUFFER),
-              this.getNextPage(tail)
-            ]
+          if (!page) {
+            return
+          }
 
-        this.setState({ pages }, () => {
-          requestAnimationFrame(() => {
-            const page = isTopBuffer
-              ? _.head(this.state.pages)
-              : _.last(this.state.pages)
-            if (!page) return
-            const rect = document
-              .getElementById(page.id)
-              .getBoundingClientRect()
+          const pages = isTopBuffer
+            ? [page, ..._.take(this.state.pages, MAX_PAGE_BUFFER)]
+            : [..._.takeRight(this.state.pages, MAX_PAGE_BUFFER), page]
+
+          this.setState({ pages }, () => {
             this.updateRunwayY(
-              isTopBuffer ? -rect.top : this.viewport.clientHeight - rect.bottom
+              isTopBuffer
+                ? -intersectionRect.bottom
+                : this.viewport.clientHeight - intersectionRect.top
             )
           })
-        })
-      })
+        }
+      )
 
   render() {
     const { pages } = this.state
@@ -209,3 +201,6 @@ class VirtualList extends React.Component {
 
 const rootElement = document.getElementById("root")
 ReactDOM.render(<VirtualList />, rootElement)
+
+const runAsync = (cb, timer = 0) =>
+  new Promise(resolve => setTimeout(() => resolve(cb()), timer))
