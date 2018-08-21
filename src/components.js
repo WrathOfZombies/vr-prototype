@@ -37,7 +37,6 @@ export const Runway = props => {
         display: "flex",
         flexDirection: "column",
         ...props.style,
-        "-webkit-transform-style": "preserve-3d",
         transformStyle: "preserve-3d"
       }}
     />
@@ -52,9 +51,7 @@ export class Page extends React.Component {
         style={{
           border: "dashed 1px rgba(0,0,0,0.4)",
           height: PAGE_HEIGHT,
-          "-webkit-transform": "translateY(100px)",
           transform: "translateY(200px)",
-          "-webkit-animation": "moveUp 0.34s ease forwards",
           animation: "moveUp 0.34s ease forwards",
           ...this.props.style
         }}

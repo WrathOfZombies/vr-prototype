@@ -6,17 +6,25 @@ import { map, filter } from "rxjs/operators"
 import "normalize.css/normalize.css"
 import "./styles.css"
 import { ViewPort, Buffer, Runway, Page } from "./components"
-import {
-  FF_MULTIPLIER,
-  PAGING_ENABLED,
-  MAX_PAGE_BUFFER,
-  REVERSE_SCROLL
-} from "./settings"
+import { PAGING_ENABLED, MAX_PAGE_BUFFER, REVERSE_SCROLL } from "./settings"
 import createDataSource from "./dataSource"
 
 const dataSource = createDataSource()
 
 const d = (...args) => console.debug(...args)
+
+const getDelta = event => {
+  if (/chrome/i.test(navigator.userAgent)) {
+    return event.deltaY * -3
+  } else if (/firefox/i.test(navigator.userAgent)) {
+    return event.deltaY * -3
+  } else if (/safari/i.test(navigator.userAgent)) {
+    return event.deltaY * -300
+  } else if (/edge/i.test(navigator.userAgent)) {
+  } else if (/msie/i.test(navigator.userAgent)) {
+  } else {
+  }
+}
 
 // TODO
 //
@@ -47,7 +55,6 @@ class VirtualList extends React.Component {
   }
 
   componentDidMount() {
-    this.isFF = /firefox/i.test(navigator.userAgent)
     this.setup()
   }
 
@@ -60,11 +67,6 @@ class VirtualList extends React.Component {
     this.bufferTop = document.getElementById("buffer-top")
     this.bufferBottom = document.getElementById("buffer-bottom")
 
-    if (this.isFF) {
-      // try to fix jitter
-      this.runway.style.transition = "transform 50ms ease-in-out"
-    }
-
     if (!REVERSE_SCROLL) {
       this.updateRunwayY(-this.bufferBottom.offsetHeight)
     }
@@ -76,14 +78,14 @@ class VirtualList extends React.Component {
   subscribeToScrollEvents() {
     this.subscription$ = fromEvent(
       document.querySelector("#viewport"),
-      this.isFF ? "DOMMouseScroll" : "mousewheel",
+      "wheel",
       {
         passive: true
       }
     )
       .pipe(
         map(event => {
-          const delta = event.wheelDelta || -(event.detail * FF_MULTIPLIER)
+          const delta = getDelta(event)
           const goingUp = delta >= 0
           return { delta, goingUp, event }
         }),
