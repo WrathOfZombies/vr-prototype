@@ -19,6 +19,7 @@
     "@types/react-dom": "^16.0.7"
   },
   "scripts": {
+    "deploy": "npm install & npm build",
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test --env=jsdom",
