@@ -20,7 +20,7 @@ export const Buffer = ({ top, bottom, style, ...rest }) => (
       background: `linear-gradient(${
         top ? "lightgreen, cyan" : "lightgreen, green"
       })`,
-      height: "50vh",
+      height: "100vh",
       ...style
     }}
     {...rest}
@@ -48,12 +48,22 @@ export class Page extends React.Component {
       <div
         {...this.props}
         style={{
-          border: "dashed 2px blue",
-          background: "linear-gradient(white, gray)",
+          border: "dashed 1px rgba(0,0,0,0.4)",
           height: PAGE_HEIGHT,
           ...this.props.style
         }}
       >
+        <h3
+          style={{
+            textAlign: "center",
+            fontWeight: 200,
+            backgroundColor: "#EAEAEA",
+            margin: "0px",
+            padding: "15px"
+          }}
+        >
+          Page #{this.props.id}
+        </h3>
         {_.map(this.props.cards, item => (
           <Card key={item.id} card={item.card} image={item.image} />
         ))}
@@ -74,11 +84,9 @@ export class Card extends React.PureComponent {
         {...this.props}
         style={{
           display: "grid",
-          border: "dashed 1px red",
           gridTemplateColumns: "80px auto auto",
           gridTemplateAreas:
             '"avatar name name" "avatar email phone" "avatar message message"',
-          fontFamily: "'San Francisco', 'Segoe UI', Tahoma",
           backgroundColor: "#F4F4F4",
           ...this.props.style
         }}
@@ -114,14 +122,16 @@ export class Card extends React.PureComponent {
         <p
           style={{
             gridArea: "phone",
-            margin: "0px"
+            margin: "0px 15px 0px 0px",
+            textAlign: "right"
           }}
         >
           {this.props.card.phone}
         </p>
         <p
           style={{
-            gridArea: "message"
+            gridArea: "message",
+            margin: "0px 15px 25px 0px"
           }}
         >
           <span style={{ fontWeight: 600, display: "block" }}>

@@ -60,9 +60,10 @@ class VirtualList extends React.Component {
       this.runway.style.transition = "transform 50ms ease-in-out"
     }
 
-    this.updateRunwayY(
-      this.bufferBottom.offsetHeight * (REVERSE_SCROLL ? 1 : -1)
-    )
+    if (!REVERSE_SCROLL) {
+      this.updateRunwayY(-this.bufferBottom.offsetHeight)
+    }
+
     this.subscribeToScrollEvents()
     this.addBufferIntersectionObservers()
   }
@@ -235,8 +236,7 @@ class VirtualList extends React.Component {
                 padding: "10px",
                 bottom: "75px",
                 right: "25px",
-                borderRadius: "5px",
-                fontFamily: "'San Francisco', 'Segoe UI', Tahoma"
+                borderRadius: "5px"
               }}
               onClick={e => this.addPage(true)}
             >
