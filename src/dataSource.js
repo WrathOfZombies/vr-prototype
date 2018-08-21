@@ -12,6 +12,4 @@ const createDataSource = () =>
     }))
   }))
 
-console.log(MAX_CARDS_PER_PAGE, MAX_PAGES)
-
 export default createDataSource

@@ -5,7 +5,12 @@ import { fromEvent } from "rxjs"
 import { map, filter } from "rxjs/operators"
 import "normalize.css/normalize.css"
 import { ViewPort, Buffer, Runway, Page } from "./components"
-import { FF_MULTIPLIER, PAGING_ENABLED, MAX_PAGE_BUFFER } from "./settings"
+import {
+  FF_MULTIPLIER,
+  PAGING_ENABLED,
+  MAX_PAGE_BUFFER,
+  REVERSE_SCROLL
+} from "./settings"
 import createDataSource from "./dataSource"
 
 const dataSource = createDataSource()
@@ -55,7 +60,9 @@ class VirtualList extends React.Component {
       this.runway.style.transition = "transform 50ms ease-in-out"
     }
 
-    this.updateRunwayY(-this.bufferTop.offsetHeight)
+    this.updateRunwayY(
+      this.bufferBottom.offsetHeight * (REVERSE_SCROLL ? 1 : -1)
+    )
     this.subscribeToScrollEvents()
     this.addBufferIntersectionObservers()
   }
@@ -110,7 +117,9 @@ class VirtualList extends React.Component {
   }
 
   getNextPage = currentPage => {
-    return Promise.resolve(null)
+    // if (REVERSE_SCROLL) {
+    //   return Promise.resolve(null)
+    // }
     d("Requesting page after", currentPage)
     return runAsync(() => dataSource.pop())
   }
@@ -162,14 +171,36 @@ class VirtualList extends React.Component {
             : [..._.takeRight(this.state.pages, MAX_PAGE_BUFFER), page]
 
           this.setState({ pages }, () => {
-            this.updateRunwayY(
-              isTopBuffer
-                ? -intersectionRect.bottom
-                : this.viewport.clientHeight - intersectionRect.top
-            )
+            requestAnimationFrame(() => {
+              if (isTopBuffer) {
+                const lastPageElement = document.getElementById(page.id)
+                this.updateRunwayY(-lastPageElement.offsetHeight)
+              }
+            })
           })
         }
       )
+
+  addPage = async (prev = false) => {
+    const page = await (prev ? this.getPrevPage() : this.getNextPage())
+    if (!page) {
+      alert("No more pages...")
+      return
+    }
+
+    const pages = prev
+      ? [page, ...this.state.pages]
+      : [...this.state.pages, page]
+
+    this.setState({ pages }, () => {
+      requestAnimationFrame(() => {
+        if (prev) {
+          const lastPageElement = document.getElementById(page.id)
+          this.updateRunwayY(-lastPageElement.offsetHeight)
+        }
+      })
+    })
+  }
 
   render() {
     const { pages } = this.state
@@ -192,6 +223,43 @@ class VirtualList extends React.Component {
             <Buffer bottom id="buffer-bottom" />
           </Runway>
         </ViewPort>
+
+        {PAGING_ENABLED ? null : (
+          <React.Fragment>
+            <button
+              style={{
+                cursor: "pointer",
+                position: "fixed",
+                zIndex: 9999,
+                padding: "10px",
+                padding: "10px",
+                bottom: "75px",
+                right: "25px",
+                borderRadius: "5px",
+                fontFamily: "'San Francisco', 'Segoe UI', Tahoma"
+              }}
+              onClick={e => this.addPage(true)}
+            >
+              Add page before
+            </button>
+            <button
+              style={{
+                cursor: "pointer",
+                position: "fixed",
+                zIndex: 9999,
+                padding: "10px",
+                padding: "10px",
+                bottom: "25px",
+                right: "25px",
+                borderRadius: "5px",
+                fontFamily: "'San Francisco', 'Segoe UI', Tahoma"
+              }}
+              onClick={e => this.addPage(false)}
+            >
+              Add page after
+            </button>
+          </React.Fragment>
+        )}
       </div>
     )
   }

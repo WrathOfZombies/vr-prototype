@@ -49,7 +49,6 @@ export class Page extends React.Component {
         {...this.props}
         style={{
           border: "dashed 2px blue",
-          margin: "10px 0",
           background: "linear-gradient(white, gray)",
           height: PAGE_HEIGHT,
           ...this.props.style
