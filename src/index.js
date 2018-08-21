@@ -1,9 +1,10 @@
-import React from "react"
 import ReactDOM from "react-dom"
+import React from "react"
 import _ from "lodash"
 import { fromEvent } from "rxjs"
 import { map, filter } from "rxjs/operators"
 import "normalize.css/normalize.css"
+import "./styles.css"
 import { ViewPort, Buffer, Runway, Page } from "./components"
 import {
   FF_MULTIPLIER,
@@ -19,8 +20,13 @@ const d = (...args) => console.debug(...args)
 
 // TODO
 //
-// Recycling
-// dynamic page height
+// Scroll bar
+// Generalize the template
+// When max pages are reached, cache the children
+// Determine how to address empty pages
+// Firefox fixes
+// Prevent overshooting buffer regions
+// Use react refs
 
 // #1 - mousewheel / DOMWheelScroll event
 //   FF feels slightly janky
@@ -50,7 +56,6 @@ class VirtualList extends React.Component {
   }
 
   setup = () => {
-    this.viewport = document.getElementById("viewport")
     this.runway = document.getElementById("runway")
     this.bufferTop = document.getElementById("buffer-top")
     this.bufferBottom = document.getElementById("buffer-bottom")
@@ -70,7 +75,7 @@ class VirtualList extends React.Component {
 
   subscribeToScrollEvents() {
     this.subscription$ = fromEvent(
-      this.viewport,
+      document.querySelector("#viewport"),
       this.isFF ? "DOMMouseScroll" : "mousewheel",
       {
         passive: true
@@ -105,23 +110,23 @@ class VirtualList extends React.Component {
     this.bufferObserver.observe(this.bufferBottom)
   }
 
-  updateRunwayY = (delta = 0, force = false) => {
-    this.runwayY = force ? delta : this.runwayY + delta
+  updateRunwayY = (delta = 0) => {
     requestAnimationFrame(() => {
+      if (typeof delta === "number") {
+        this.runwayY = this.runwayY + delta
+      } else if (typeof delta === "string") {
+        const lastPageElement = document.querySelector(`#${delta}`)
+        this.runwayY = this.runwayY - lastPageElement.offsetHeight
+      }
       this.runway.style.transform = `translate3d(0, ${this.runwayY}px, 0)`
     })
   }
 
   getPrevPage = currentPage => {
-    d("Requesting page before", currentPage)
     return runAsync(() => dataSource.pop())
   }
 
   getNextPage = currentPage => {
-    // if (REVERSE_SCROLL) {
-    //   return Promise.resolve(null)
-    // }
-    d("Requesting page after", currentPage)
     return runAsync(() => dataSource.pop())
   }
 
@@ -143,44 +148,33 @@ class VirtualList extends React.Component {
         }
 
         const data = {
-          id,
           isIntersecting,
-          isTopBuffer,
-          intersectionRatio: entry.intersectionRatio,
-          clientRect: entry.boundingClientRect,
-          intersectionRect: entry.intersectionRect
+          isTopBuffer
         }
         return data
       })
       .filter(({ isIntersecting }) => isIntersecting)
-      .each(
-        async ({ id, isTopBuffer, intersectionRect, intersectionRatio }) => {
-          d(id, intersectionRatio)
+      .each(async ({ isTopBuffer }) => {
+        if (!PAGING_ENABLED) return
 
-          if (!PAGING_ENABLED) return
+        const page = isTopBuffer
+          ? await this.getPrevPage(_.head(this.state.pages))
+          : await this.getNextPage(_.last(this.state.pages))
 
-          const page = isTopBuffer
-            ? await this.getPrevPage(_.head(this.state.pages))
-            : await this.getNextPage(_.last(this.state.pages))
-
-          if (!page) {
-            return
-          }
-
-          const pages = isTopBuffer
-            ? [page, ..._.take(this.state.pages, MAX_PAGE_BUFFER)]
-            : [..._.takeRight(this.state.pages, MAX_PAGE_BUFFER), page]
-
-          this.setState({ pages }, () => {
-            requestAnimationFrame(() => {
-              if (isTopBuffer) {
-                const lastPageElement = document.getElementById(page.id)
-                this.updateRunwayY(-lastPageElement.offsetHeight)
-              }
-            })
-          })
+        if (!page) {
+          return
         }
-      )
+
+        const pages = isTopBuffer
+          ? [page, ..._.take(this.state.pages, MAX_PAGE_BUFFER)]
+          : [..._.takeRight(this.state.pages, MAX_PAGE_BUFFER), page]
+
+        this.setState({ pages }, () => {
+          if (isTopBuffer) {
+            this.updateRunwayY(`vrpage-${page.id}`)
+          }
+        })
+      })
 
   addPage = async (prev = false) => {
     const page = await (prev ? this.getPrevPage() : this.getNextPage())
@@ -194,18 +188,14 @@ class VirtualList extends React.Component {
       : [...this.state.pages, page]
 
     this.setState({ pages }, () => {
-      requestAnimationFrame(() => {
-        if (prev) {
-          const lastPageElement = document.getElementById(page.id)
-          this.updateRunwayY(-lastPageElement.offsetHeight)
-        }
-      })
+      if (prev) {
+        this.updateRunwayY(`vrpage-${page.id}`)
+      }
     })
   }
 
   render() {
     const { pages } = this.state
-
     return (
       <div>
         <ViewPort id="viewport">
@@ -214,7 +204,7 @@ class VirtualList extends React.Component {
             {pages.map(page => (
               <Page
                 key={page.id}
-                id={page.id}
+                id={`vrpage-${page.id}`}
                 className={page.name}
                 cards={page.cards}
               >
@@ -227,37 +217,8 @@ class VirtualList extends React.Component {
 
         {PAGING_ENABLED ? null : (
           <React.Fragment>
-            <button
-              style={{
-                cursor: "pointer",
-                position: "fixed",
-                zIndex: 9999,
-                padding: "10px",
-                padding: "10px",
-                bottom: "75px",
-                right: "25px",
-                borderRadius: "5px"
-              }}
-              onClick={e => this.addPage(true)}
-            >
-              Add page before
-            </button>
-            <button
-              style={{
-                cursor: "pointer",
-                position: "fixed",
-                zIndex: 9999,
-                padding: "10px",
-                padding: "10px",
-                bottom: "25px",
-                right: "25px",
-                borderRadius: "5px",
-                fontFamily: "'San Francisco', 'Segoe UI', Tahoma"
-              }}
-              onClick={e => this.addPage(false)}
-            >
-              Add page after
-            </button>
+            <button onClick={e => this.addPage(true)}>Add page before</button>
+            <button onClick={e => this.addPage(false)}>Add page after</button>
           </React.Fragment>
         )}
       </div>

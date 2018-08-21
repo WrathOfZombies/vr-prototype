@@ -36,7 +36,9 @@ export const Runway = props => {
       style={{
         display: "flex",
         flexDirection: "column",
-        ...props.style
+        ...props.style,
+        "-webkit-transform-style": "preserve-3d",
+        transformStyle: "preserve-3d"
       }}
     />
   )
@@ -50,6 +52,10 @@ export class Page extends React.Component {
         style={{
           border: "dashed 1px rgba(0,0,0,0.4)",
           height: PAGE_HEIGHT,
+          "-webkit-transform": "translateY(100px)",
+          transform: "translateY(200px)",
+          "-webkit-animation": "moveUp 0.34s ease forwards",
+          animation: "moveUp 0.34s ease forwards",
           ...this.props.style
         }}
       >
@@ -62,7 +68,7 @@ export class Page extends React.Component {
             padding: "15px"
           }}
         >
-          Page #{this.props.id}
+          {this.props.id}
         </h3>
         {_.map(this.props.cards, item => (
           <Card key={item.id} card={item.card} image={item.image} />
