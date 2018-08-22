@@ -51,8 +51,8 @@ export class Page extends React.Component {
         style={{
           border: "dashed 1px rgba(0,0,0,0.4)",
           height: PAGE_HEIGHT,
-          transform: "translateY(200px)",
-          animation: "moveUp 0.34s ease forwards",
+          // transform: "translateY(200px)",
+          // animation: "moveUp 0.34s ease forwards",
           ...this.props.style
         }}
       >
