@@ -11,8 +11,6 @@ import createDataSource from "./dataSource"
 
 const dataSource = createDataSource()
 
-const d = (...args) => console.debug(...args)
-
 const getDelta = event => {
   if (/chrome/i.test(navigator.userAgent)) {
     return event.deltaY * -3
@@ -20,28 +18,8 @@ const getDelta = event => {
     return event.deltaY * -3
   } else if (/safari/i.test(navigator.userAgent)) {
     return event.deltaY * -300
-  } else if (/edge/i.test(navigator.userAgent)) {
-  } else if (/msie/i.test(navigator.userAgent)) {
-  } else {
   }
 }
-
-// TODO
-//
-// Scroll bar
-// Generalize the template
-// When max pages are reached, cache the children
-// Determine how to address empty pages
-// Firefox fixes
-// Prevent overshooting buffer regions
-// Use react refs
-
-// #1 - mousewheel / DOMWheelScroll event
-//   FF feels slightly janky
-//   all others feel native
-//   does not require scrollable container
-//   all perf tests 60 fps
-//   scroll updates are sub millisecond (0.2ms etc)
 
 class VirtualList extends React.Component {
   runwayY = 0
@@ -218,10 +196,17 @@ class VirtualList extends React.Component {
         </ViewPort>
 
         {PAGING_ENABLED ? null : (
-          <React.Fragment>
+          <div
+            style={{
+              position: "fixed",
+              display: "inline-flex",
+              top: "25px",
+              left: "25px"
+            }}
+          >
             <button onClick={e => this.addPage(true)}>Add page before</button>
             <button onClick={e => this.addPage(false)}>Add page after</button>
-          </React.Fragment>
+          </div>
         )}
       </div>
     )
