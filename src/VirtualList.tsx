@@ -8,8 +8,6 @@ import { findDOMNode } from "react-dom";
 const getDelta = event => {
   if (/edge/i.test(navigator.userAgent)) {
     return event.deltaY * -1;
-  } else if (/safari/i.test(navigator.userAgent)) {
-    return event.deltaY * -300;
   } else if (/chrome/i.test(navigator.userAgent)) {
     return event.deltaY * -3;
   } else if (/firefox/i.test(navigator.userAgent)) {
@@ -49,12 +47,13 @@ export default class VirtualList extends React.Component<
   IVirtualListProps,
   IVirtualListState
 > {
-  private scrollStatus = {
-    canScrollUp: true,
-    canScrollDown: true
-  };
+  // private scrollStatus = {
+  //   canScrollUp: true,
+  //   canScrollDown: true
+  // };
   private runwayY = 0;
   private viewport: HTMLElement;
+  private viewportRect: ClientRect;
   private runway: HTMLElement;
   private previousBuffer: HTMLElement;
   private nextBuffer: HTMLElement;
@@ -129,6 +128,7 @@ export default class VirtualList extends React.Component<
     }
     this.addBufferIntersectionObservers();
     this.viewport.addEventListener("wheel", this.onWheel, { passive: true });
+    this.viewportRect = this.viewport.getBoundingClientRect();
   }
 
   private addBufferIntersectionObservers() {
@@ -147,11 +147,29 @@ export default class VirtualList extends React.Component<
   private onWheel(event: WheelEvent) {
     const delta = getDelta(event);
     const goingUp = delta >= 0;
-    if (
-      (!this.scrollStatus.canScrollUp && goingUp) ||
-      (!this.scrollStatus.canScrollDown && !goingUp)
-    ) {
-      return;
+    // if (
+    //   (!this.scrollStatus.canScrollUp && goingUp) ||
+    //   (!this.scrollStatus.canScrollDown && !goingUp)
+    // ) {
+    //   return;
+    // }
+    const runwayRect = this.runway.getBoundingClientRect();
+
+    if (goingUp) {
+      console.debug("stopping scroll above");
+      const reset = this.runwayY + 1285.3333740234375 - this.viewportRect.top;
+      if (reset > 0) {
+        this.slideRunwayInPx(-reset);
+        return;
+      }
+    } else {
+      console.debug("stopping scroll below");
+      const reset =
+        this.viewportRect.bottom - runwayRect.bottom - 1285.3333740234375;
+      if (reset < 0) {
+        this.slideRunwayInPx(-reset);
+        return;
+      }
     }
     this.slideRunwayInPx(delta);
   }
