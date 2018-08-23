@@ -1,7 +1,5 @@
 import * as React from "react";
 import * as _ from "lodash";
-import { fromEvent } from "rxjs";
-import { map, filter, last } from "rxjs/operators";
 import "normalize.css/normalize.css";
 import "./styles.css";
 import { ViewPort, Buffer, Runway, Page } from "./components";
@@ -44,6 +42,7 @@ export default class VirtualList extends React.Component<IVirtualListProps> {
     super(props);
     this.handleIntersection = this.handleIntersection.bind(this);
     this.addPage = this.addPage.bind(this);
+    this.onScroll = this.onScroll.bind(this);
   }
 
   componentDidMount() {
@@ -51,9 +50,11 @@ export default class VirtualList extends React.Component<IVirtualListProps> {
   }
 
   componentWillUnmount() {
-    if (this.subscription$) {
-      this.subscription$.unsubscribe();
+    const viewport = document.querySelector("#viewport");
+    if (!viewport) {
+      return;
     }
+    viewport.removeEventListener("wheel", this.onScroll);
   }
 
   setup() {
@@ -74,26 +75,20 @@ export default class VirtualList extends React.Component<IVirtualListProps> {
     if (!viewport) {
       return;
     }
-    this.subscription$ = fromEvent(viewport, "wheel", {
-      passive: true
-    })
-      .pipe(
-        map(event => {
-          const delta = getDelta(event);
-          const goingUp = delta >= 0;
-          return { delta, goingUp, event };
-        }),
-        filter(({ goingUp }) => {
-          if (!this.scrollStatus.canScrollUp && goingUp) {
-            return false;
-          }
-          if (!this.scrollStatus.canScrollDown && !goingUp) {
-            return false;
-          }
-          return true;
-        })
-      )
-      .subscribe(next => this.updateRunwayY(next.delta));
+
+    viewport.addEventListener("wheel", this.onScroll, { passive: true });
+  }
+
+  onScroll(event: WheelEvent) {
+    const delta = getDelta(event);
+    const goingUp = delta >= 0;
+    if (
+      (!this.scrollStatus.canScrollUp && goingUp) ||
+      (!this.scrollStatus.canScrollDown && !goingUp)
+    ) {
+      return;
+    }
+    this.updateRunwayY(delta);
   }
 
   addBufferIntersectionObservers() {
