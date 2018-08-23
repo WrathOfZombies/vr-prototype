@@ -6,12 +6,14 @@ import { ViewPort, Buffer, Runway, Page, IPageProps } from "./components";
 import { findDOMNode } from "react-dom";
 
 const getDelta = event => {
-  if (/chrome/i.test(navigator.userAgent)) {
+  if (/edge/i.test(navigator.userAgent)) {
+    return event.deltaY * -1;
+  } else if (/safari/i.test(navigator.userAgent)) {
+    return event.deltaY * -300;
+  } else if (/chrome/i.test(navigator.userAgent)) {
     return event.deltaY * -3;
   } else if (/firefox/i.test(navigator.userAgent)) {
     return event.deltaY * -3;
-  } else if (/safari/i.test(navigator.userAgent)) {
-    return event.deltaY * -300;
   } else {
     return 0;
   }
@@ -86,7 +88,7 @@ export default class VirtualList extends React.Component<
           <label>
             <input
               type="checkbox"
-              checked={this.state.settings.isPagingEnabled}
+              defaultChecked={this.state.settings.isPagingEnabled}
               onClick={e => this.togglePaging()}
             />{" "}
             Toggle paging
