@@ -20,10 +20,12 @@ const getDelta = event => {
 export interface IVirtualListSettings {
   startBottomUp: boolean;
   maxPageBuffer: number;
+  isPagingEnabled: boolean;
   debug: boolean;
 }
 
 const defaultSettings: IVirtualListSettings = {
+  isPagingEnabled: true,
   startBottomUp: false,
   maxPageBuffer: 10,
   debug: false
@@ -80,14 +82,15 @@ export default class VirtualList extends React.Component<
     let debugButtons: JSX.Element | null = null;
     if (this.state.settings.debug) {
       debugButtons = (
-        <div
-          style={{
-            position: "absolute",
-            display: "inline-flex",
-            top: "25px",
-            left: "25px"
-          }}
-        >
+        <div id="debug">
+          <label>
+            <input
+              type="checkbox"
+              checked={this.state.settings.isPagingEnabled}
+              onClick={e => this.togglePaging()}
+            />{" "}
+            Toggle paging
+          </label>
           <button onClick={e => this.addPage(true)}>Add page before</button>
           <button onClick={e => this.addPage(false)}>Add page after</button>
         </div>
@@ -132,7 +135,7 @@ export default class VirtualList extends React.Component<
       {
         root: this.viewport,
         rootMargin: "0px",
-        threshold: _.range(0, 1.0, 0.1)
+        threshold: _.range(0, 1.0, 0.01)
       }
     );
     this.bufferObserver.observe(this.previousBuffer);
@@ -153,22 +156,10 @@ export default class VirtualList extends React.Component<
 
   private async handleIntersection(entry) {
     const isScrollingUp = entry.target === this.previousBuffer;
-    const isIntersecting = entry.intersectionRatio > 0.05;
-    const shouldPauseScrolling = entry.intersectionRatio > 0.2;
-
-    this.scrollStatus = {
-      canScrollUp: isScrollingUp
-        ? !shouldPauseScrolling
-        : this.scrollStatus.canScrollUp,
-      canScrollDown: !isScrollingUp
-        ? !shouldPauseScrolling
-        : this.scrollStatus.canScrollDown
-    };
-
-    if (!isIntersecting || this.state.settings.debug) {
+    const isIntersecting = entry.intersectionRatio > 0;
+    if (!isIntersecting || !this.state.settings.isPagingEnabled) {
       return;
     }
-
     this.addPage(isScrollingUp);
   }
 
@@ -223,5 +214,11 @@ export default class VirtualList extends React.Component<
     requestAnimationFrame(() => {
       this.runway.style.transform = `translate3d(0, ${this.runwayY}px, 0)`;
     });
+  }
+
+  private togglePaging() {
+    const settings = { ...this.state.settings };
+    settings.isPagingEnabled = !settings.isPagingEnabled;
+    this.setState({ settings });
   }
 }

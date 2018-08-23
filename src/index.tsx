@@ -48,7 +48,7 @@ ReactDOM.render(
     getPageAfter={getNextPage}
     getPageBefore={getPrevPage}
     settings={{
-      debug: false,
+      debug: true,
       startBottomUp: true
     }}
   />,
