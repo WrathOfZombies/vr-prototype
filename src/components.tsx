@@ -1,6 +1,6 @@
-import React from "react"
-import _ from "lodash"
-export const PAGE_HEIGHT = "auto"
+import * as React from "react";
+import * as _ from "lodash";
+export const PAGE_HEIGHT = "auto";
 
 export const ViewPort = props => (
   <div
@@ -12,7 +12,7 @@ export const ViewPort = props => (
       overscrollBehavior: "contain"
     }}
   />
-)
+);
 
 export const Buffer = ({ top, bottom, style, ...rest }) => (
   <div
@@ -27,7 +27,7 @@ export const Buffer = ({ top, bottom, style, ...rest }) => (
   >
     {top ? "TOP" : bottom ? "BOTTOM" : ""} BUFFER
   </div>
-)
+);
 
 export const Runway = props => {
   return (
@@ -40,10 +40,10 @@ export const Runway = props => {
         transformStyle: "preserve-3d"
       }}
     />
-  )
-}
+  );
+};
 
-export class Page extends React.Component {
+export class Page extends React.Component<any> {
   render() {
     return (
       <div
@@ -71,16 +71,16 @@ export class Page extends React.Component {
           <Card key={item.id} card={item.card} image={item.image} />
         ))}
       </div>
-    )
+    );
   }
 }
 
-export class Card extends React.PureComponent {
+export class Card extends React.PureComponent<any> {
   render() {
     if (!this.props.card) {
-      return null
+      return null;
     }
-    const data = _.head(this.props.card.posts)
+    const data: any = _.head(this.props.card.posts);
     return (
       <div
         className="card"
@@ -89,7 +89,7 @@ export class Card extends React.PureComponent {
           display: "grid",
           gridTemplateColumns: "80px auto auto",
           gridTemplateAreas:
-            '"avatar name name" "avatar email phone" "avatar message message"',
+            "'avatar name name' 'avatar email phone' 'avatar message message'",
           backgroundColor: "#F4F4F4",
           ...this.props.style
         }}
@@ -144,6 +144,6 @@ export class Card extends React.PureComponent {
           {data.paragraph}
         </p>
       </div>
-    )
+    );
   }
 }

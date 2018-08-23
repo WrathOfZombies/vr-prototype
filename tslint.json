@@ -1,0 +1,46 @@
+{
+  "extends": ["tslint-config-prettier"],
+  "linterOptions": {
+    "typeCheck": true
+  },
+  "rules": {
+    "arrow-return-shorthand": true,
+    "class-name": true,
+    "curly": true,
+    "eofline": true,
+    "forin": true,
+    "import-spacing": true,
+    "indent": [true, "spaces", 2],
+    "label-position": true,
+    "no-arg": true,
+    "no-console": [true, "info", "time", "timeEnd"],
+    "no-construct": true,
+    "no-debugger": true,
+    "no-duplicate-variable": true,
+    "no-empty": false,
+    "no-eval": true,
+    "no-irregular-whitespace": true,
+    "no-namespace": [true, "allow-declarations"],
+    "no-reference": true,
+    "no-switch-case-fall-through": true,
+    "no-trailing-whitespace": true,
+    "no-unused-expression": true,
+    "no-var-keyword": true,
+    "one-line": [true, "check-open-brace", "check-whitespace"],
+    "one-variable-per-declaration": true,
+    "only-arrow-functions": [true, "allow-declarations"],
+    "prefer-switch": true,
+    "quotemark": [true, "double", "jsx-double"],
+    "radix": true,
+    "semicolon": [true, "always", "ignore-interfaces"],
+    "triple-equals": [true, "allow-null-check"],
+    "whitespace": [
+      true,
+      "check-branch",
+      "check-decl",
+      "check-operator",
+      "check-separator",
+      "check-type"
+    ]
+  }
+}
