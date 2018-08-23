@@ -15,7 +15,7 @@ export class ViewPort extends React.Component<{} & ICommonProps> {
         style={{
           overflow: "hidden",
           height: "100vh",
-          overscrollBehavior: "contain",
+          overscrollBehavior: "none",
           ...style
         }}
         {...rest}
@@ -34,6 +34,7 @@ export class Runway extends React.Component<{} & ICommonProps> {
           display: "flex",
           flexDirection: "column",
           transformStyle: "preserve-3d",
+          overscrollBehavior: "none",
           ...style
         }}
         {...rest}
@@ -80,6 +81,68 @@ export const Page = ({ id, cards }) => {
       {_.map(cards, item => (
         <Card key={item.id} card={item.card} image={item.image} />
       ))}
+    </div>
+  );
+};
+
+export const Greek = () => {
+  return (
+    <div
+      className="card"
+      style={{
+        display: "grid",
+        gridTemplateColumns: "80px auto auto",
+        gridTemplateAreas:
+          "'avatar name name' 'avatar email phone' 'avatar message message'",
+        backgroundColor: "#F4F4F4",
+        padding: "20px 0 0 10px",
+        animation: "blink 1.5s ease-in-out infinite forwards"
+      }}
+    >
+      <div
+        style={{
+          backgroundColor: "#DDD",
+          gridArea: "avatar",
+          width: "60px",
+          height: "60px",
+          margin: "25px 10px 10px",
+          borderRadius: "50%"
+        }}
+      />
+      <div
+        style={{
+          backgroundColor: "#CCC",
+          gridArea: "name",
+          marginBottom: "8px",
+          fontWeight: 200,
+          height: "36px"
+        }}
+      />
+      <div
+        style={{
+          backgroundColor: "#DDD",
+          gridArea: "email",
+          margin: "0px 15px 10px 0px",
+          height: "21px"
+        }}
+      />
+      <div
+        style={{
+          backgroundColor: "#DDD",
+          gridArea: "phone",
+          margin: "0px 15px 10px 0px",
+          textAlign: "right",
+          height: "21px"
+        }}
+      />
+      <div
+        style={{
+          backgroundColor: "#EEE",
+          gridArea: "message",
+          margin: "0px 15px 25px 0px",
+          height: "100px"
+        }}
+      />
     </div>
   );
 };
