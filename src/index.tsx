@@ -2,8 +2,11 @@ import * as React from "react";
 import * as ReactDOM from "react-dom";
 import * as _ from "lodash";
 import * as faker from "faker";
-import { MAX_CARDS_PER_PAGE, MAX_PAGES } from "./settings";
+
 import VirtualList from "./VirtualList";
+
+export const MAX_PAGES = 50;
+export const MAX_CARDS_PER_PAGE = 3;
 
 const createDataSource = () =>
   _.map(
@@ -42,8 +45,8 @@ const getNextPage = currentPage => {
 const rootElement = document.getElementById("root");
 ReactDOM.render(
   <VirtualList
-    getNextPage={getNextPage}
-    getPrevPage={getPrevPage}
+    getPageAfter={getNextPage}
+    getPageBefore={getPrevPage}
     settings={{
       debug: false,
       startBottomUp: true

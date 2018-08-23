@@ -2,7 +2,8 @@ import * as React from "react";
 import * as _ from "lodash";
 import "normalize.css/normalize.css";
 import "./styles.css";
-import { ViewPort, Buffer, Runway, Page } from "./components";
+import { ViewPort, Buffer, Runway, Page, IPageProps } from "./components";
+import { findDOMNode } from "react-dom";
 
 const getDelta = event => {
   if (/chrome/i.test(navigator.userAgent)) {
@@ -24,28 +25,19 @@ export interface IVirtualListSettings {
 
 const defaultSettings: IVirtualListSettings = {
   startBottomUp: false,
-  maxPageBuffer: 5,
+  maxPageBuffer: 10,
   debug: false
 };
 
-export interface IPage {
-  id: string | number;
-  cards: {
-    id: string | number;
-    card: any;
-    image: any;
-  };
-}
-
 export interface IVirtualListProps {
-  getPrevPage: (currentPage?: IPage) => Promise<IPage | undefined>;
-  getNextPage: (currentPage?: IPage) => Promise<IPage | undefined>;
+  getPageBefore: (currentPage?: IPageProps) => Promise<IPageProps | undefined>;
+  getPageAfter: (currentPage?: IPageProps) => Promise<IPageProps | undefined>;
   style?: React.CSSProperties;
   settings?: Partial<IVirtualListSettings>;
 }
 
 export interface IVirtualListState {
-  pages: IPage[];
+  pages: IPageProps[];
   settings: IVirtualListSettings;
 }
 
@@ -53,20 +45,21 @@ export default class VirtualList extends React.Component<
   IVirtualListProps,
   IVirtualListState
 > {
-  private runwayY = 0;
   private scrollStatus = {
     canScrollUp: true,
     canScrollDown: true
   };
-  private runway;
-  private bufferTop;
-  private bufferBottom;
-  private bufferObserver;
+  private runwayY = 0;
+  private viewport: HTMLElement;
+  private runway: HTMLElement;
+  private previousBuffer: HTMLElement;
+  private nextBuffer: HTMLElement;
+  private bufferObserver: IntersectionObserver;
 
   constructor(props) {
     super(props);
     this.handleIntersection = this.handleIntersection.bind(this);
-    this.onScroll = this.onScroll.bind(this);
+    this.onWheel = this.onWheel.bind(this);
     this.state = {
       pages: [],
       settings: { ...defaultSettings, ...this.props.settings }
@@ -78,18 +71,12 @@ export default class VirtualList extends React.Component<
   }
 
   public componentWillUnmount() {
-    const viewport = document.querySelector("#viewport");
-    if (!viewport) {
-      return;
-    }
-    viewport.removeEventListener("wheel", this.onScroll);
+    this.viewport.removeEventListener("wheel", this.onWheel);
+    this.bufferObserver.disconnect();
   }
 
   public render() {
     const { pages } = this.state;
-    const B: any = Buffer;
-    const P: any = Page;
-
     let debugButtons: JSX.Element | null = null;
     if (this.state.settings.debug) {
       debugButtons = (
@@ -107,53 +94,52 @@ export default class VirtualList extends React.Component<
       );
     }
 
-    return (
-      <div>
-        <ViewPort id="viewport">
-          <Runway id="runway">
-            <B top id="buffer-top" />
-            {pages.map((page: any) => (
-              <P
-                key={page.id}
-                id={`vrpage-${page.id}`}
-                className={page.name}
-                cards={page.cards}
-              >
-                {page.children}
-              </P>
-            ))}
-            <B bottom id="buffer-bottom" />
-          </Runway>
-        </ViewPort>
+    const direction = this.state.settings.startBottomUp
+      ? "bottom-up"
+      : "top-down";
 
+    return (
+      <ViewPort
+        data-direction={direction}
+        element={ref => (this.viewport = ref)}
+      >
+        <Runway element={ref => (this.runway = ref)}>
+          <Buffer
+            name="previous"
+            element={ref => (this.previousBuffer = ref)}
+          />
+          {pages.map(page => (
+            <Page key={page.id} {...page} />
+          ))}
+          <Buffer name="next" element={ref => (this.nextBuffer = ref)} />
+        </Runway>
         {debugButtons}
-      </div>
+      </ViewPort>
     );
   }
 
   private setup() {
-    this.runway = document.getElementById("runway");
-    this.bufferTop = document.getElementById("buffer-top");
-    this.bufferBottom = document.getElementById("buffer-bottom");
-
     if (!this.state.settings.startBottomUp) {
-      this.updateRunwayY(-this.bufferBottom.offsetHeight);
+      this.slideRunwayInPx(-this.nextBuffer.offsetHeight);
     }
-
-    this.subscribeToScrollEvents();
     this.addBufferIntersectionObservers();
+    this.viewport.addEventListener("wheel", this.onWheel, { passive: true });
   }
 
-  private subscribeToScrollEvents() {
-    const viewport = document.querySelector("#viewport");
-    if (!viewport) {
-      return;
-    }
-
-    viewport.addEventListener("wheel", this.onScroll, { passive: true });
+  private addBufferIntersectionObservers() {
+    this.bufferObserver = new IntersectionObserver(
+      entries => entries.forEach(this.handleIntersection),
+      {
+        root: this.viewport,
+        rootMargin: "0px",
+        threshold: _.range(0, 1.0, 0.1)
+      }
+    );
+    this.bufferObserver.observe(this.previousBuffer);
+    this.bufferObserver.observe(this.nextBuffer);
   }
 
-  private onScroll(event: WheelEvent) {
+  private onWheel(event: WheelEvent) {
     const delta = getDelta(event);
     const goingUp = delta >= 0;
     if (
@@ -162,101 +148,80 @@ export default class VirtualList extends React.Component<
     ) {
       return;
     }
-    this.updateRunwayY(delta);
-  }
-
-  private addBufferIntersectionObservers() {
-    this.bufferObserver = new IntersectionObserver(
-      entries => entries.forEach(this.handleIntersection),
-      {
-        rootMargin: "150px 0px",
-        threshold: [0, 0.25, 0.5, 0.75, 1]
-      }
-    );
-
-    this.bufferObserver.observe(this.bufferTop);
-    this.bufferObserver.observe(this.bufferBottom);
-  }
-
-  private async updateRunwayY(delta: number | string = 0) {
-    requestAnimationFrame(() => {
-      if (typeof delta === "number") {
-        this.runwayY = this.runwayY + delta;
-      } else if (typeof delta === "string") {
-        const lastPageElement = document.querySelector(
-          `#${delta}`
-        ) as HTMLElement;
-        if (!lastPageElement) {
-          return;
-        }
-        this.runwayY = this.runwayY - lastPageElement.offsetHeight;
-      }
-      this.runway.style.transform = `translate3d(0, ${this.runwayY}px, 0)`;
-    });
+    this.slideRunwayInPx(delta);
   }
 
   private async handleIntersection(entry) {
-    const id = _.get(entry, "target.id");
-    const isTopBuffer = id === "buffer-top";
+    const isScrollingUp = entry.target === this.previousBuffer;
     const isIntersecting = entry.intersectionRatio > 0.05;
     const shouldPauseScrolling = entry.intersectionRatio > 0.2;
 
     this.scrollStatus = {
-      canScrollUp: isTopBuffer
+      canScrollUp: isScrollingUp
         ? !shouldPauseScrolling
         : this.scrollStatus.canScrollUp,
-      canScrollDown: !isTopBuffer
+      canScrollDown: !isScrollingUp
         ? !shouldPauseScrolling
         : this.scrollStatus.canScrollDown
     };
 
-    if (!isIntersecting) {
+    if (!isIntersecting || this.state.settings.debug) {
       return;
     }
 
-    if (this.state.settings.debug) {
-      return;
-    }
+    this.addPage(isScrollingUp);
+  }
 
-    const page = isTopBuffer
-      ? await this.props.getPrevPage(_.head(this.state.pages))
-      : await this.props.getNextPage(_.last(this.state.pages));
+  private async addPage(isScrollingUp = false) {
+    const page = isScrollingUp
+      ? await this.props.getPageBefore(_.head(this.state.pages))
+      : await this.props.getPageAfter(_.last(this.state.pages));
 
     if (!page) {
       return;
     }
 
-    const pages = isTopBuffer
-      ? [page, ..._.take(this.state.pages, this.state.settings.maxPageBuffer)]
-      : [
-          ..._.takeRight(this.state.pages, this.state.settings.maxPageBuffer),
-          page
-        ];
+    let prunedElementHeight = 0;
+    if (isScrollingUp) {
+      const prune = this.state.pages[this.state.settings.maxPageBuffer];
+      if (prune) {
+        const prunedElement: any = this.nextBuffer.previousElementSibling;
+        prunedElementHeight = prunedElement.offsetHeight;
+      }
+    }
+
+    let pages: IPageProps[] = [];
+    if (isScrollingUp) {
+      const remainingPages = _.take(
+        this.state.pages,
+        this.state.settings.maxPageBuffer
+      );
+      pages = [page, ...remainingPages];
+    } else {
+      const remainingPages = _.takeRight(
+        this.state.pages,
+        this.state.settings.maxPageBuffer
+      );
+      pages = [...remainingPages, page];
+    }
 
     this.setState({ pages }, () => {
-      if (isTopBuffer) {
-        this.updateRunwayY(`vrpage-${page.id}`);
-      }
+      this.slideRunwayToBuffer(isScrollingUp, prunedElementHeight);
     });
   }
 
-  private async addPage(prev = false) {
-    const page = await (prev
-      ? this.props.getPrevPage()
-      : this.props.getNextPage());
-    if (!page) {
-      alert("No more pages...");
+  private slideRunwayToBuffer(isGoingUp: boolean, prunedElementHeight: number) {
+    if (!isGoingUp) {
       return;
     }
+    const page: any = this.previousBuffer.nextElementSibling;
+    this.slideRunwayInPx(-page.offsetHeight + prunedElementHeight);
+  }
 
-    const pages = prev
-      ? [page, ...this.state.pages]
-      : [...this.state.pages, page];
-
-    this.setState({ pages }, () => {
-      if (prev) {
-        this.updateRunwayY(`vrpage-${page.id}`);
-      }
+  private slideRunwayInPx(delta: number) {
+    this.runwayY = this.runwayY + delta;
+    requestAnimationFrame(() => {
+      this.runway.style.transform = `translate3d(0, ${this.runwayY}px, 0)`;
     });
   }
 }
