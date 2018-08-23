@@ -27,7 +27,7 @@ export interface IVirtualListSettings {
 const defaultSettings: IVirtualListSettings = {
   isPagingEnabled: true,
   startBottomUp: false,
-  maxPageBuffer: 10,
+  maxPageBuffer: 25,
   debug: false
 };
 
@@ -157,7 +157,8 @@ export default class VirtualList extends React.Component<
 
     if (goingUp) {
       console.debug("stopping scroll above");
-      const reset = this.runwayY + 1285.3333740234375 - this.viewportRect.top;
+      const reset =
+        this.runwayY + 1285.3333740234375 - 200 - this.viewportRect.top;
       if (reset > 0) {
         this.slideRunwayInPx(-reset);
         return;
@@ -192,14 +193,14 @@ export default class VirtualList extends React.Component<
       return;
     }
 
-    let prunedElementHeight = 0;
-    if (isScrollingUp) {
-      const prune = this.state.pages[this.state.settings.maxPageBuffer];
-      if (prune) {
-        const prunedElement: any = this.nextBuffer.previousElementSibling;
-        prunedElementHeight = prunedElement.offsetHeight;
-      }
-    }
+    // let prunedElementHeight = 0;
+    // if (isScrollingUp) {
+    //   const prune = this.state.pages[this.state.settings.maxPageBuffer];
+    //   if (prune) {
+    //     const prunedElement: any = this.nextBuffer.previousElementSibling;
+    //     prunedElementHeight = prunedElement.offsetHeight;
+    //   }
+    // }
 
     let pages: IPageProps[] = [];
     if (isScrollingUp) {
@@ -217,11 +218,14 @@ export default class VirtualList extends React.Component<
     }
 
     this.setState({ pages }, () => {
-      this.slideRunwayToBuffer(isScrollingUp, prunedElementHeight);
+      this.slideRunwayToBuffer(isScrollingUp);
     });
   }
 
-  private slideRunwayToBuffer(isGoingUp: boolean, prunedElementHeight: number) {
+  private slideRunwayToBuffer(
+    isGoingUp: boolean,
+    prunedElementHeight: number = 0
+  ) {
     if (!isGoingUp) {
       return;
     }
