@@ -2,7 +2,14 @@ import * as React from "react";
 import * as _ from "lodash";
 import "normalize.css/normalize.css";
 import "./styles.css";
-import { ViewPort, Buffer, Runway, Page, IPageProps } from "./components";
+import {
+  ViewPort,
+  Buffer,
+  Runway,
+  Page,
+  IPageProps,
+  DebugPanel
+} from "./components";
 import { findDOMNode } from "react-dom";
 
 const getDelta = event => {
@@ -27,7 +34,7 @@ export interface IVirtualListSettings {
 const defaultSettings: IVirtualListSettings = {
   isPagingEnabled: true,
   startBottomUp: false,
-  maxPageBuffer: 25,
+  maxPageBuffer: 7,
   debug: false
 };
 
@@ -47,10 +54,6 @@ export default class VirtualList extends React.Component<
   IVirtualListProps,
   IVirtualListState
 > {
-  // private scrollStatus = {
-  //   canScrollUp: true,
-  //   canScrollDown: true
-  // };
   private runwayY = 0;
   private viewport: HTMLElement;
   private viewportRect: ClientRect;
@@ -63,6 +66,8 @@ export default class VirtualList extends React.Component<
     super(props);
     this.handleIntersection = this.handleIntersection.bind(this);
     this.onWheel = this.onWheel.bind(this);
+    this.toggle = this.toggle.bind(this);
+    this.addPage = this.addPage.bind(this);
     this.state = {
       pages: [],
       settings: { ...defaultSettings, ...this.props.settings }
@@ -80,24 +85,6 @@ export default class VirtualList extends React.Component<
 
   public render() {
     const { pages } = this.state;
-    let debugButtons: JSX.Element | null = null;
-    if (this.state.settings.debug) {
-      debugButtons = (
-        <div id="debug">
-          <label>
-            <input
-              type="checkbox"
-              defaultChecked={this.state.settings.isPagingEnabled}
-              onClick={e => this.togglePaging()}
-            />{" "}
-            Toggle paging
-          </label>
-          <button onClick={e => this.addPage(true)}>Add page before</button>
-          <button onClick={e => this.addPage(false)}>Add page after</button>
-        </div>
-      );
-    }
-
     const direction = this.state.settings.startBottomUp
       ? "bottom-up"
       : "top-down";
@@ -117,7 +104,13 @@ export default class VirtualList extends React.Component<
           ))}
           <Buffer name="next" element={ref => (this.nextBuffer = ref)} />
         </Runway>
-        {debugButtons}
+        {this.state.settings.debug ? (
+          <DebugPanel
+            addPage={this.addPage}
+            toggle={this.toggle}
+            settings={this.state.settings}
+          />
+        ) : null}
       </ViewPort>
     );
   }
@@ -147,31 +140,18 @@ export default class VirtualList extends React.Component<
   private onWheel(event: WheelEvent) {
     const delta = getDelta(event);
     const goingUp = delta >= 0;
-    // if (
-    //   (!this.scrollStatus.canScrollUp && goingUp) ||
-    //   (!this.scrollStatus.canScrollDown && !goingUp)
-    // ) {
-    //   return;
-    // }
-    const runwayRect = this.runway.getBoundingClientRect();
+    const threshold = 500;
 
-    if (goingUp) {
-      console.debug("stopping scroll above");
-      const reset =
-        this.runwayY + 1285.3333740234375 - 200 - this.viewportRect.top;
-      if (reset > 0) {
-        this.slideRunwayInPx(-reset);
-        return;
-      }
-    } else {
-      console.debug("stopping scroll below");
-      const reset =
-        this.viewportRect.bottom - runwayRect.bottom - 1285.3333740234375;
-      if (reset < 0) {
-        this.slideRunwayInPx(-reset);
-        return;
-      }
+    // Optimize the number of times we need to check this
+    const pbb = this.previousBuffer.getBoundingClientRect().bottom;
+    const nbt = this.nextBuffer.getBoundingClientRect().top;
+    if (
+      pbb - threshold > this.viewportRect.top ||
+      nbt + threshold < this.viewportRect.bottom
+    ) {
+      return;
     }
+
     this.slideRunwayInPx(delta);
   }
 
@@ -240,9 +220,9 @@ export default class VirtualList extends React.Component<
     });
   }
 
-  private togglePaging() {
+  private toggle(setting) {
     const settings = { ...this.state.settings };
-    settings.isPagingEnabled = !settings.isPagingEnabled;
+    settings[setting] = !settings[setting];
     this.setState({ settings });
   }
 }

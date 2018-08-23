@@ -212,3 +212,26 @@ export const Card = ({ card, image }) => {
     </div>
   );
 };
+
+export const DebugPanel = ({ settings, toggle, addPage }) => (
+  <div id="debug">
+    <label>
+      <input
+        type="checkbox"
+        defaultChecked={settings.isPagingEnabled}
+        onClick={e => toggle("isPagingEnabled")}
+      />
+      isPagingEnabled?
+    </label>
+    <label>
+      <input
+        type="checkbox"
+        defaultChecked={settings.isBottomUp}
+        onClick={e => toggle("isBottomUp")}
+      />
+      isBottomUp?
+    </label>
+    <button onClick={e => addPage(true)}>Add page before</button>
+    <button onClick={e => addPage(false)}>Add page after</button>
+  </div>
+);
