@@ -14,7 +14,7 @@ const createDataSource = () =>
     id =>
       ({
         id,
-        cards: _.map(_.range(1, _.random(1, MAX_CARDS_PER_PAGE)), () => ({
+        cards: _.map(_.range(1, _.random(2, MAX_CARDS_PER_PAGE + 1)), () => ({
           id: _.uniqueId(),
           card: faker.helpers.createCard(),
           image: faker.image.avatar()

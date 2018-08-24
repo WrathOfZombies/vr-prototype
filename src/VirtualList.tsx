@@ -139,7 +139,6 @@ export default class VirtualList extends React.Component<
 
   private onWheel(event: WheelEvent) {
     const delta = getDelta(event);
-    const goingUp = delta >= 0;
     const threshold = 500;
 
     // Optimize the number of times we need to check this
@@ -173,14 +172,14 @@ export default class VirtualList extends React.Component<
       return;
     }
 
-    // let prunedElementHeight = 0;
-    // if (isScrollingUp) {
-    //   const prune = this.state.pages[this.state.settings.maxPageBuffer];
-    //   if (prune) {
-    //     const prunedElement: any = this.nextBuffer.previousElementSibling;
-    //     prunedElementHeight = prunedElement.offsetHeight;
-    //   }
-    // }
+    let prunedElementHeight = 0;
+    if (!isScrollingUp) {
+      const prune = this.state.pages[this.state.settings.maxPageBuffer];
+      if (prune) {
+        const prunedElement: any = this.previousBuffer.nextElementSibling;
+        prunedElementHeight = prunedElement.offsetHeight;
+      }
+    }
 
     let pages: IPageProps[] = [];
     if (isScrollingUp) {
@@ -198,7 +197,7 @@ export default class VirtualList extends React.Component<
     }
 
     this.setState({ pages }, () => {
-      this.slideRunwayToBuffer(isScrollingUp);
+      this.slideRunwayToBuffer(isScrollingUp, prunedElementHeight);
     });
   }
 
@@ -206,11 +205,12 @@ export default class VirtualList extends React.Component<
     isGoingUp: boolean,
     prunedElementHeight: number = 0
   ) {
-    if (!isGoingUp) {
-      return;
+    let delta = prunedElementHeight;
+    if (isGoingUp) {
+      const page: any = this.nextBuffer.previousElementSibling;
+      delta = -page.offsetHeight + prunedElementHeight;
     }
-    const page: any = this.previousBuffer.nextElementSibling;
-    this.slideRunwayInPx(-page.offsetHeight + prunedElementHeight);
+    this.slideRunwayInPx(delta);
   }
 
   private slideRunwayInPx(delta: number) {
