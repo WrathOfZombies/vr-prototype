@@ -29,12 +29,18 @@ export const Buffer = ({ element, name, ...props }) => (
   <div
     data-id={name}
     ref={ref => element && element(ref)}
-    style={{
-      background: `linear-gradient(${"lightgreen, cyan"})`,
-      height: "100vh"
-    }}
-    {...props}
-  />
+    // style={{
+    //   background: `linear-gradient(${"lightgreen, cyan"})`,
+    //   height: "100vh"
+    // }}
+  >
+    <Greek />
+    <Greek />
+    <Greek />
+    <Greek />
+    <Greek />
+    <Greek />
+  </div>
 );
 
 export interface IPageProps {
@@ -210,10 +216,10 @@ export const DebugPanel = ({ settings, toggle, addPage }) => (
     <label>
       <input
         type="checkbox"
-        defaultChecked={settings.isBottomUp}
-        onClick={e => toggle("isBottomUp")}
+        defaultChecked={settings.startBottomUp}
+        onClick={e => toggle("startBottomUp")}
       />
-      isBottomUp?
+      startBottomUp?
     </label>
     <button onClick={e => addPage(true)}>Add page before</button>
     <button onClick={e => addPage(false)}>Add page after</button>
