@@ -207,7 +207,7 @@ export default class VirtualList extends React.Component<
   ) {
     let delta = prunedElementHeight;
     if (isGoingUp) {
-      const page: any = this.nextBuffer.previousElementSibling;
+      const page: any = this.previousBuffer.nextElementSibling;
       delta = -page.offsetHeight + prunedElementHeight;
     }
     this.slideRunwayInPx(delta);
