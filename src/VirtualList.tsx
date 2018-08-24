@@ -2,15 +2,9 @@ import * as React from "react";
 import * as _ from "lodash";
 import "normalize.css/normalize.css";
 import "./styles.css";
-import {
-  ViewPort,
-  Buffer,
-  Runway,
-  Page,
-  IPageProps,
-  DebugPanel
-} from "./components";
+import { Buffer, Runway, Page, IPageProps, DebugPanel } from "./components";
 import { findDOMNode } from "react-dom";
+import { ViewPort } from "./Viewport";
 
 const getDelta = event => {
   if (/edge/i.test(navigator.userAgent)) {
@@ -34,7 +28,7 @@ export interface IVirtualListSettings {
 const defaultSettings: IVirtualListSettings = {
   isPagingEnabled: true,
   startBottomUp: false,
-  maxPageBuffer: 7,
+  maxPageBuffer: 15,
   debug: false
 };
 
@@ -139,18 +133,22 @@ export default class VirtualList extends React.Component<
 
   private onWheel(event: WheelEvent) {
     const delta = getDelta(event);
+    const isGoingUp = delta > 0;
     const threshold = 500;
 
     // Optimize the number of times we need to check this
-    const pbb = this.previousBuffer.getBoundingClientRect().bottom;
-    const nbt = this.nextBuffer.getBoundingClientRect().top;
-    if (
-      pbb - threshold > this.viewportRect.top ||
-      nbt + threshold < this.viewportRect.bottom
-    ) {
-      return;
+    if (isGoingUp) {
+      const previousBufferBottom = this.previousBuffer.getBoundingClientRect()
+        .bottom;
+      if (previousBufferBottom - threshold > this.viewportRect.top) {
+        return;
+      }
+    } else {
+      const nextBufferTop = this.nextBuffer.getBoundingClientRect().top;
+      if (nextBufferTop + threshold < this.viewportRect.bottom) {
+        return;
+      }
     }
-
     this.slideRunwayInPx(delta);
   }
 

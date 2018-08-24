@@ -6,24 +6,6 @@ export interface ICommonProps {
   style?: React.CSSProperties;
 }
 
-export class ViewPort extends React.Component<{} & ICommonProps> {
-  render() {
-    const { element, style, ...rest } = this.props;
-    return (
-      <div
-        ref={ref => element && element(ref)}
-        style={{
-          overflow: "hidden",
-          height: "100vh",
-          overscrollBehavior: "none",
-          ...style
-        }}
-        {...rest}
-      />
-    );
-  }
-}
-
 export class Runway extends React.Component<{} & ICommonProps> {
   render() {
     const { element, style, ...rest } = this.props;
@@ -157,7 +139,9 @@ export const Card = ({ card, image }) => {
         gridTemplateColumns: "80px auto auto",
         gridTemplateAreas:
           "'avatar name name' 'avatar email phone' 'avatar message message'",
-        backgroundColor: "#F4F4F4"
+        backgroundColor: "#F4F4F4",
+        transform: "scale(0.85)",
+        animation: "scaleUp 0.45s ease-in-out forwards"
       }}
     >
       <img

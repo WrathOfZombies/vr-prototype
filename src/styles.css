@@ -1,24 +1,4 @@
 /** https://github.com/codrops/GridLoadingEffects/blob/master/css/component.css **/
-
-@-webkit-keyframes moveUp {
-  0% {
-  }
-  100% {
-    -webkit-transform: translateY(0);
-    opacity: 1;
-  }
-}
-
-@keyframes moveUp {
-  0% {
-  }
-  100% {
-    -webkit-transform: translateY(0);
-    transform: translateY(0);
-    opacity: 1;
-  }
-}
-
 @keyframes blink {
   0% {
     opacity: 0.6;
@@ -50,4 +30,14 @@ body {
 input[type="checkbox"],
 button {
   margin: 0px 8px;
+}
+
+@-webkit-keyframes scaleUp {
+	0% { }
+	100% { -webkit-transform: scale(1); opacity: 1; }
+}
+
+@keyframes scaleUp {
+	0% { }
+	100% { -webkit-transform: scale(1); transform: scale(1); opacity: 1; }
 }
