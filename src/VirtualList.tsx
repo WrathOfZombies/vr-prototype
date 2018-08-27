@@ -61,7 +61,6 @@ export default class VirtualList extends React.Component<
   constructor(props) {
     super(props);
     this.handleIntersection = this.handleIntersection.bind(this);
-    this.onScroll = this.onScroll.bind(this);
     this.toggle = this.toggle.bind(this);
     this.addPage = this.addPage.bind(this);
     this.state = {
@@ -77,7 +76,6 @@ export default class VirtualList extends React.Component<
   }
 
   public componentWillUnmount() {
-    this.viewport.removeEventListener("scroll", this.onScroll);
     this.bufferObserver.disconnect();
   }
 
@@ -118,11 +116,7 @@ export default class VirtualList extends React.Component<
   }
 
   private setup() {
-    if (!this.state.settings.startBottomUp) {
-      this.slideRunwayInPx(-this.nextBuffer.offsetHeight);
-    }
     this.addBufferIntersectionObservers();
-    this.viewport.addEventListener("scroll", this.onScroll, { passive: true });
     this.viewportRect = this.viewport.getBoundingClientRect();
     this.setState({
       previousBufferHeight: this.viewportRect.height,
