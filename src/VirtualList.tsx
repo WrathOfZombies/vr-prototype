@@ -42,6 +42,8 @@ export interface IVirtualListProps {
 export interface IVirtualListState {
   pages: IPageProps[];
   settings: IVirtualListSettings;
+  previousBufferHeight: number;
+  nextBufferHeight: number;
 }
 
 export default class VirtualList extends React.Component<
@@ -59,11 +61,13 @@ export default class VirtualList extends React.Component<
   constructor(props) {
     super(props);
     this.handleIntersection = this.handleIntersection.bind(this);
-    this.onWheel = this.onWheel.bind(this);
+    this.onScroll = this.onScroll.bind(this);
     this.toggle = this.toggle.bind(this);
     this.addPage = this.addPage.bind(this);
     this.state = {
       pages: [],
+      previousBufferHeight: 0,
+      nextBufferHeight: 0,
       settings: { ...defaultSettings, ...this.props.settings }
     };
   }
@@ -73,7 +77,7 @@ export default class VirtualList extends React.Component<
   }
 
   public componentWillUnmount() {
-    this.viewport.removeEventListener("wheel", this.onWheel);
+    this.viewport.removeEventListener("scroll", this.onScroll);
     this.bufferObserver.disconnect();
   }
 
@@ -92,11 +96,15 @@ export default class VirtualList extends React.Component<
           <Buffer
             name="previous"
             element={ref => (this.previousBuffer = ref)}
+            height={this.state.previousBufferHeight}
           />
           {pages.map(page => (
             <Page key={page.id} {...page} />
           ))}
-          <Buffer name="next" element={ref => (this.nextBuffer = ref)} />
+          <Buffer
+            name="next"
+            element={ref => (this.nextBuffer = ref)}
+            height={this.state.nextBufferHeight}/>
         </Runway>
         {this.state.settings.debug ? (
           <DebugPanel
@@ -114,8 +122,12 @@ export default class VirtualList extends React.Component<
       this.slideRunwayInPx(-this.nextBuffer.offsetHeight);
     }
     this.addBufferIntersectionObservers();
-    this.viewport.addEventListener("wheel", this.onWheel, { passive: true });
+    this.viewport.addEventListener("scroll", this.onScroll, { passive: true });
     this.viewportRect = this.viewport.getBoundingClientRect();
+    this.setState({
+      previousBufferHeight: this.viewportRect.height,
+      nextBufferHeight: this.viewportRect.height
+    });
   }
 
   private addBufferIntersectionObservers() {
@@ -123,33 +135,12 @@ export default class VirtualList extends React.Component<
       entries => entries.forEach(this.handleIntersection),
       {
         root: this.viewport,
-        rootMargin: "0px",
+        rootMargin: "100px 0px 0px 0px",
         threshold: _.range(0, 1.0, 0.01)
       }
     );
     this.bufferObserver.observe(this.previousBuffer);
     this.bufferObserver.observe(this.nextBuffer);
-  }
-
-  private onWheel(event: WheelEvent) {
-    const delta = getDelta(event);
-    const isGoingUp = delta > 0;
-    const threshold = 500;
-
-    // Optimize the number of times we need to check this
-    if (isGoingUp) {
-      const previousBufferBottom = this.previousBuffer.getBoundingClientRect()
-        .bottom;
-      if (previousBufferBottom - threshold > this.viewportRect.top) {
-        return;
-      }
-    } else {
-      const nextBufferTop = this.nextBuffer.getBoundingClientRect().top;
-      if (nextBufferTop + threshold < this.viewportRect.bottom) {
-        return;
-      }
-    }
-    this.slideRunwayInPx(delta);
   }
 
   private async handleIntersection(entry) {
@@ -171,7 +162,13 @@ export default class VirtualList extends React.Component<
     }
 
     let prunedElementHeight = 0;
-    if (!isScrollingUp) {
+    if (isScrollingUp) {
+      const prune = this.state.pages[this.state.settings.maxPageBuffer];
+      if (prune) {
+        const prunedElement: any = this.nextBuffer.previousElementSibling;
+        prunedElementHeight = prunedElement.offsetHeight;
+      }
+    } else {
       const prune = this.state.pages[this.state.settings.maxPageBuffer];
       if (prune) {
         const prunedElement: any = this.previousBuffer.nextElementSibling;
@@ -194,27 +191,38 @@ export default class VirtualList extends React.Component<
       pages = [...remainingPages, page];
     }
 
+    const scrollTop = this.viewport.scrollTop;
     this.setState({ pages }, () => {
-      this.slideRunwayToBuffer(isScrollingUp, prunedElementHeight);
+      this.adjustScrollTop(isScrollingUp, scrollTop, prunedElementHeight);
     });
   }
 
-  private slideRunwayToBuffer(
-    isGoingUp: boolean,
-    prunedElementHeight: number = 0
-  ) {
-    let delta = prunedElementHeight;
-    if (isGoingUp) {
-      const page: any = this.previousBuffer.nextElementSibling;
-      delta = -page.offsetHeight + prunedElementHeight;
-    }
-    this.slideRunwayInPx(delta);
-  }
-
-  private slideRunwayInPx(delta: number) {
-    this.runwayY = this.runwayY + delta;
+  private adjustScrollTop(isScrollingUp: boolean, previousScrollTop: number, prunedElementHeight: number) {
     requestAnimationFrame(() => {
-      this.runway.style.transform = `translate3d(0, ${this.runwayY}px, 0)`;
+      const page: any = isScrollingUp ? this.previousBuffer.nextElementSibling : this.nextBuffer.previousElementSibling;
+      const pageOffset = page.offsetHeight;
+
+      // let nextBufferHeight;
+      // let previousBufferHeight;
+      // if (prunedElementHeight > 0) {
+      //   if (isScrollingUp) {
+      //     nextBufferHeight = this.state.nextBufferHeight + prunedElementHeight;
+      //     previousBufferHeight = Math.max(0, this.state.previousBufferHeight - pageOffset);
+      //   } else {
+      //     previousBufferHeight = this.state.previousBufferHeight + prunedElementHeight;
+      //     nextBufferHeight = Math.max(0, this.state.nextBufferHeight - pageOffset);
+      //   }
+
+      //   this.setState({
+      //     nextBufferHeight: nextBufferHeight,
+      //     previousBufferHeight: previousBufferHeight
+      //   });
+      // }
+
+      if (isScrollingUp) {
+        const newScrollTop = previousScrollTop + page.offsetHeight;
+        this.viewport.scrollTop = newScrollTop;
+      }
     });
   }
 

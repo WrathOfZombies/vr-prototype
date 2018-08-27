@@ -41,9 +41,12 @@ export class ViewPort extends React.Component<{} & ICommonProps> {
           element(ref);
         }}
         style={{
-          overflow: "hidden",
           height: "100vh",
           overscrollBehavior: "none",
+          overflowY: "auto",
+          willChange: "scroll-position",
+          backfaceVisibility: "hidden",
+          transform: "translate3d(0,0,0)",
           ...style
         }}
         {...rest}

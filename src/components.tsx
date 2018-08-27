@@ -15,8 +15,6 @@ export class Runway extends React.Component<{} & ICommonProps> {
         style={{
           display: "flex",
           flexDirection: "column",
-          transformStyle: "preserve-3d",
-          overscrollBehavior: "none",
           ...style
         }}
         {...rest}
@@ -29,10 +27,6 @@ export const Buffer = ({ element, name, ...props }) => (
   <div
     data-id={name}
     ref={ref => element && element(ref)}
-    // style={{
-    //   background: `linear-gradient(${"lightgreen, cyan"})`,
-    //   height: "100vh"
-    // }}
   >
     <Greek />
     <Greek />
