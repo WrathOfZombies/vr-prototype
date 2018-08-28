@@ -27,18 +27,18 @@ export const Buffer = ({ element, name, ...props }) => (
   <div
     data-id={name}
     ref={ref => element && element(ref)}
-  >
-    <Greek />
-    <Greek />
-    <Greek />
-    <Greek />
-    <Greek />
-    <Greek />
-  </div>
+    style={{
+      width: "100vw",
+      height: "100vh",
+      background: "url('loading.png') center center repeat-y / cover",
+      animation: "blink 1.5s ease-in-out infinite forwards"
+    }}
+  />
 );
 
 export interface IPageProps {
   id: string | number;
+  key: string;
   cards: {
     id: string | number;
     card: any;
@@ -63,68 +63,6 @@ export const Page = ({ id, cards }) => {
       {_.map(cards, item => (
         <Card key={item.id} card={item.card} image={item.image} />
       ))}
-    </div>
-  );
-};
-
-export const Greek = () => {
-  return (
-    <div
-      className="card"
-      style={{
-        display: "grid",
-        gridTemplateColumns: "80px auto auto",
-        gridTemplateAreas:
-          "'avatar name name' 'avatar email phone' 'avatar message message'",
-        backgroundColor: "#F4F4F4",
-        padding: "20px 0 0 10px",
-        animation: "blink 1.5s ease-in-out infinite forwards"
-      }}
-    >
-      <div
-        style={{
-          backgroundColor: "#DDD",
-          gridArea: "avatar",
-          width: "60px",
-          height: "60px",
-          margin: "25px 10px 10px",
-          borderRadius: "50%"
-        }}
-      />
-      <div
-        style={{
-          backgroundColor: "#CCC",
-          gridArea: "name",
-          marginBottom: "8px",
-          fontWeight: 200,
-          height: "36px"
-        }}
-      />
-      <div
-        style={{
-          backgroundColor: "#DDD",
-          gridArea: "email",
-          margin: "0px 15px 10px 0px",
-          height: "21px"
-        }}
-      />
-      <div
-        style={{
-          backgroundColor: "#DDD",
-          gridArea: "phone",
-          margin: "0px 15px 10px 0px",
-          textAlign: "right",
-          height: "21px"
-        }}
-      />
-      <div
-        style={{
-          backgroundColor: "#EEE",
-          gridArea: "message",
-          margin: "0px 15px 25px 0px",
-          height: "100px"
-        }}
-      />
     </div>
   );
 };

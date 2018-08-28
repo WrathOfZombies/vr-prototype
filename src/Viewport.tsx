@@ -2,7 +2,7 @@ import * as React from "react";
 import * as _ from "lodash";
 import { ICommonProps } from "./components";
 
-export class ViewPort extends React.Component<{} & ICommonProps> {
+export default class ViewPort extends React.Component<{} & ICommonProps> {
   viewport: HTMLDivElement;
   runway: HTMLDivElement;
   runwayObserver: MutationObserver;
@@ -43,6 +43,7 @@ export class ViewPort extends React.Component<{} & ICommonProps> {
           height: "100vh",
           overscrollBehavior: "none",
           overflowY: "auto",
+          overflowX: "hidden",
           willChange: "scroll-position",
           backfaceVisibility: "hidden",
           transform: "translate3d(0,0,0)",

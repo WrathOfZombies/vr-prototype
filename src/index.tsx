@@ -13,9 +13,10 @@ const createDataSource = () =>
     _.range(1, MAX_PAGES),
     id =>
       ({
+        key: `page-${_.uniqueId()}`,
         id,
         cards: _.map(_.range(1, _.random(2, MAX_CARDS_PER_PAGE + 1)), () => ({
-          id: _.uniqueId(),
+          id: `card-${_.uniqueId()}`,
           card: faker.helpers.createCard(),
           image: faker.image.avatar()
         }))
@@ -35,7 +36,7 @@ const getPrevPage = currentPage => {
 
 const getNextPage = currentPage => {
   if (!currentPage) {
-    return Promise.resolve(dataSource[0]);
+    return Promise.resolve(dataSource[1]);
   } else {
     const id = currentPage.id === dataSource.length ? 0 : currentPage.id;
     return Promise.resolve(dataSource[id]);

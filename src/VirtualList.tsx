@@ -3,7 +3,7 @@ import * as _ from "lodash";
 import "normalize.css/normalize.css";
 import "./styles.css";
 import { Buffer, Runway, Page, IPageProps, DebugPanel } from "./components";
-import { ViewPort } from "./Viewport";
+import ViewPort from "./Viewport";
 
 export interface IVirtualListSettings {
   startBottomUp: boolean;
@@ -31,6 +31,7 @@ export interface IVirtualListState {
   settings: IVirtualListSettings;
   previousBufferHeight: number;
   nextBufferHeight: number;
+  isScrollingUp: boolean;
 }
 
 export default class VirtualList extends React.Component<
@@ -50,11 +51,13 @@ export default class VirtualList extends React.Component<
     this.handleIntersection = this.handleIntersection.bind(this);
     this.toggle = this.toggle.bind(this);
     this.addPage = this.addPage.bind(this);
+    const settings = { ...defaultSettings, ...this.props.settings };
     this.state = {
       pages: [],
       previousBufferHeight: 0,
       nextBufferHeight: 0,
-      settings: { ...defaultSettings, ...this.props.settings }
+      settings,
+      isScrollingUp: settings.startBottomUp
     };
   }
 
@@ -64,6 +67,18 @@ export default class VirtualList extends React.Component<
 
   public componentWillUnmount() {
     this.bufferObserver.disconnect();
+  }
+
+  public getSnapshotBeforeUpdate() {
+    return { scrollTop: this.viewport.scrollTop };
+  }
+
+  public componentDidUpdate(
+    prevProps: IVirtualListProps,
+    prevState: IVirtualListState,
+    { scrollTop }: any
+  ) {
+    this.adjustScrollTop(prevState.isScrollingUp, scrollTop);
   }
 
   public render() {
@@ -82,16 +97,11 @@ export default class VirtualList extends React.Component<
             <Buffer
               name="previous"
               element={ref => (this.previousBuffer = ref)}
-              height={this.state.previousBufferHeight}
             />
             {pages.map(page => (
-              <Page key={page.id} {...page} />
+              <Page {...page} />
             ))}
-            <Buffer
-              name="next"
-              element={ref => (this.nextBuffer = ref)}
-              height={this.state.nextBufferHeight}
-            />
+            <Buffer name="next" element={ref => (this.nextBuffer = ref)} />
           </Runway>
         </ViewPort>
         {this.state.settings.debug ? (
@@ -140,11 +150,9 @@ export default class VirtualList extends React.Component<
     const page = isScrollingUp
       ? await this.props.getPageBefore(_.head(this.state.pages))
       : await this.props.getPageAfter(_.last(this.state.pages));
-
     if (!page) {
       return;
     }
-
     let pages: IPageProps[] = [];
     if (isScrollingUp) {
       const remainingPages = _.take(
@@ -159,11 +167,7 @@ export default class VirtualList extends React.Component<
       );
       pages = [...remainingPages, page];
     }
-
-    const scrollTop = this.viewport.scrollTop;
-    this.setState({ pages }, () => {
-      this.adjustScrollTop(isScrollingUp, scrollTop);
-    });
+    this.setState({ pages, isScrollingUp });
   }
 
   private adjustScrollTop(isScrollingUp: boolean, previousScrollTop: number) {
