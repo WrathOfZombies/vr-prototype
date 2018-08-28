@@ -34,7 +34,6 @@ export class ViewPort extends React.Component<{} & ICommonProps> {
   render() {
     const { element, style, ...rest } = this.props;
     return (
-      <React.Fragment>
       <div
         ref={(ref: any) => {
           this.viewport = ref;
@@ -51,7 +50,6 @@ export class ViewPort extends React.Component<{} & ICommonProps> {
         }}
         {...rest}
       />
-      </React.Fragment>
     );
   }
 }

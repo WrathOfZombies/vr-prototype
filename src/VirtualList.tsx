@@ -3,20 +3,7 @@ import * as _ from "lodash";
 import "normalize.css/normalize.css";
 import "./styles.css";
 import { Buffer, Runway, Page, IPageProps, DebugPanel } from "./components";
-import { findDOMNode } from "react-dom";
 import { ViewPort } from "./Viewport";
-
-const getDelta = event => {
-  if (/edge/i.test(navigator.userAgent)) {
-    return event.deltaY * -1;
-  } else if (/chrome/i.test(navigator.userAgent)) {
-    return event.deltaY * -3;
-  } else if (/firefox/i.test(navigator.userAgent)) {
-    return event.deltaY * -3;
-  } else {
-    return 0;
-  }
-};
 
 export interface IVirtualListSettings {
   startBottomUp: boolean;
@@ -86,24 +73,27 @@ export default class VirtualList extends React.Component<
       : "top-down";
 
     return (
-      <ViewPort
-        data-direction={direction}
-        element={ref => (this.viewport = ref)}
-      >
-        <Runway element={ref => (this.runway = ref)}>
-          <Buffer
-            name="previous"
-            element={ref => (this.previousBuffer = ref)}
-            height={this.state.previousBufferHeight}
-          />
-          {pages.map(page => (
-            <Page key={page.id} {...page} />
-          ))}
-          <Buffer
-            name="next"
-            element={ref => (this.nextBuffer = ref)}
-            height={this.state.nextBufferHeight}/>
-        </Runway>
+      <React.Fragment>
+        <ViewPort
+          data-direction={direction}
+          element={ref => (this.viewport = ref)}
+        >
+          <Runway element={ref => (this.runway = ref)}>
+            <Buffer
+              name="previous"
+              element={ref => (this.previousBuffer = ref)}
+              height={this.state.previousBufferHeight}
+            />
+            {pages.map(page => (
+              <Page key={page.id} {...page} />
+            ))}
+            <Buffer
+              name="next"
+              element={ref => (this.nextBuffer = ref)}
+              height={this.state.nextBufferHeight}
+            />
+          </Runway>
+        </ViewPort>
         {this.state.settings.debug ? (
           <DebugPanel
             addPage={this.addPage}
@@ -111,7 +101,7 @@ export default class VirtualList extends React.Component<
             settings={this.state.settings}
           />
         ) : null}
-      </ViewPort>
+      </React.Fragment>
     );
   }
 
@@ -130,7 +120,7 @@ export default class VirtualList extends React.Component<
       {
         root: this.viewport,
         rootMargin: "100px 0px 0px 0px",
-        threshold: _.range(0, 1.0, 0.01)
+        threshold: _.range(0, 1.0, 0.1)
       }
     );
     this.bufferObserver.observe(this.previousBuffer);
@@ -155,21 +145,6 @@ export default class VirtualList extends React.Component<
       return;
     }
 
-    let prunedElementHeight = 0;
-    if (isScrollingUp) {
-      const prune = this.state.pages[this.state.settings.maxPageBuffer];
-      if (prune) {
-        const prunedElement: any = this.nextBuffer.previousElementSibling;
-        prunedElementHeight = prunedElement.offsetHeight;
-      }
-    } else {
-      const prune = this.state.pages[this.state.settings.maxPageBuffer];
-      if (prune) {
-        const prunedElement: any = this.previousBuffer.nextElementSibling;
-        prunedElementHeight = prunedElement.offsetHeight;
-      }
-    }
-
     let pages: IPageProps[] = [];
     if (isScrollingUp) {
       const remainingPages = _.take(
@@ -187,32 +162,15 @@ export default class VirtualList extends React.Component<
 
     const scrollTop = this.viewport.scrollTop;
     this.setState({ pages }, () => {
-      this.adjustScrollTop(isScrollingUp, scrollTop, prunedElementHeight);
+      this.adjustScrollTop(isScrollingUp, scrollTop);
     });
   }
 
-  private adjustScrollTop(isScrollingUp: boolean, previousScrollTop: number, prunedElementHeight: number) {
+  private adjustScrollTop(isScrollingUp: boolean, previousScrollTop: number) {
     requestAnimationFrame(() => {
-      const page: any = isScrollingUp ? this.previousBuffer.nextElementSibling : this.nextBuffer.previousElementSibling;
-      const pageOffset = page.offsetHeight;
-
-      // let nextBufferHeight;
-      // let previousBufferHeight;
-      // if (prunedElementHeight > 0) {
-      //   if (isScrollingUp) {
-      //     nextBufferHeight = this.state.nextBufferHeight + prunedElementHeight;
-      //     previousBufferHeight = Math.max(0, this.state.previousBufferHeight - pageOffset);
-      //   } else {
-      //     previousBufferHeight = this.state.previousBufferHeight + prunedElementHeight;
-      //     nextBufferHeight = Math.max(0, this.state.nextBufferHeight - pageOffset);
-      //   }
-
-      //   this.setState({
-      //     nextBufferHeight: nextBufferHeight,
-      //     previousBufferHeight: previousBufferHeight
-      //   });
-      // }
-
+      const page: any = isScrollingUp
+        ? this.previousBuffer.nextElementSibling
+        : this.nextBuffer.previousElementSibling;
       if (isScrollingUp) {
         const newScrollTop = previousScrollTop + page.offsetHeight;
         this.viewport.scrollTop = newScrollTop;
