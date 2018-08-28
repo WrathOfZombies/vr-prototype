@@ -120,7 +120,7 @@ export default class VirtualList extends React.Component<
       {
         root: this.viewport,
         rootMargin: "100px 0px 0px 0px",
-        threshold: _.range(0, 1.0, 0.1)
+        threshold: _.range(0, 1.0, 0.01)
       }
     );
     this.bufferObserver.observe(this.previousBuffer);
