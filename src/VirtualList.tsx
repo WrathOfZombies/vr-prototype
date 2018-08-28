@@ -32,7 +32,6 @@ export interface IVirtualListState {
   previousBufferHeight: number;
   nextBufferHeight: number;
   isScrollingUp: boolean;
-  prunedElementHeight: number;
 }
 
 export default class VirtualList extends React.Component<
@@ -58,8 +57,7 @@ export default class VirtualList extends React.Component<
       previousBufferHeight: 0,
       nextBufferHeight: 0,
       settings,
-      isScrollingUp: settings.startBottomUp,
-      prunedElementHeight: 0
+      isScrollingUp: settings.startBottomUp
     };
   }
 
@@ -81,7 +79,7 @@ export default class VirtualList extends React.Component<
     { scrollTop }: any
   ) {
     if (this.state.pages.length > 0) {
-      this.adjustScrollTop(prevState.isScrollingUp, scrollTop, this.state.prunedElementHeight);
+      this.adjustScrollTop(prevState.isScrollingUp, scrollTop);
     }
   }
 
@@ -182,28 +180,24 @@ export default class VirtualList extends React.Component<
     this.setState({
       pages,
       isScrollingUp,
-      prunedElementHeight: heightUpdate.prunedElementHeight,
       nextBufferHeight: heightUpdate.nextBufferHeight,
       previousBufferHeight: heightUpdate.previousBufferHeight
     });
   }
 
   private getHeightChanges(isScrollingUp: boolean): {
-    prunedElementHeight: number,
     nextBufferHeight: number,
     previousBufferHeight: number
   } {
     let nextBufferHeight = this.state.nextBufferHeight;
     let previousBufferHeight = this.state.previousBufferHeight;
-    let prunedElementHeight = 0;
     let bufferToResize;
     const prune = this.state.pages[this.state.settings.maxPageBuffer];
     if (isScrollingUp) {
       bufferToResize = this.previousBuffer.nextElementSibling;
       if (prune) {
         const prunedElement: any = this.nextBuffer.previousElementSibling;
-        prunedElementHeight = prunedElement.offsetHeight;
-        nextBufferHeight += prunedElementHeight;
+        nextBufferHeight += prunedElement.offsetHeight;
 
         // this calculation is not correct, it should be reducing the buffer for the size of the item that is being added
         // but we don't know that here. This should probably be done in adjustScrollTop.
@@ -214,8 +208,7 @@ export default class VirtualList extends React.Component<
       if (prune) {
         bufferToResize = this.nextBuffer.previousElementSibling;
         const prunedElement: any = this.previousBuffer.nextElementSibling;
-        prunedElementHeight = prunedElement.offsetHeight;
-        previousBufferHeight += prunedElementHeight;
+        previousBufferHeight += prunedElement.offsetHeight;
 
         // this calculation is not correct, it should be reducing the buffer for the size of the item that is being added
         // but we don't know that here. This should probably be done in adjustScrollTop.
@@ -225,13 +218,12 @@ export default class VirtualList extends React.Component<
     }
 
     return {
-      prunedElementHeight,
       nextBufferHeight,
       previousBufferHeight
-    }
+    };
   }
 
-  private adjustScrollTop(isScrollingUp: boolean, previousScrollTop: number, prunedElementHeight: number) {
+  private adjustScrollTop(isScrollingUp: boolean, previousScrollTop: number) {
     requestAnimationFrame(() => {
       const page: any = isScrollingUp
         ? this.previousBuffer.nextElementSibling
