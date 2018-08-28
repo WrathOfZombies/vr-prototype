@@ -23,13 +23,14 @@ export class Runway extends React.Component<{} & ICommonProps> {
   }
 }
 
-export const Buffer = ({ element, name, ...props }) => (
+export const Buffer = ({ element, name, height, ...props }) => (
   <div
     data-id={name}
     ref={ref => element && element(ref)}
     style={{
       width: "100vw",
-      height: "100vh",
+      height: height,
+      minHeight: "100vh",
       background: "url('loading.png') center center repeat-y / cover",
       animation: "blink 1.5s ease-in-out infinite forwards"
     }}
