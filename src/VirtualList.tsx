@@ -78,7 +78,9 @@ export default class VirtualList extends React.Component<
     prevState: IVirtualListState,
     { scrollTop }: any
   ) {
-    this.adjustScrollTop(prevState.isScrollingUp, scrollTop);
+    if (this.state.pages.length > 0) {
+      this.adjustScrollTop(prevState.isScrollingUp, scrollTop);
+    }
   }
 
   public render() {

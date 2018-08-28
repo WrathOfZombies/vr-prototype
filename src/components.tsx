@@ -77,9 +77,7 @@ export const Card = ({ card, image }) => {
         gridTemplateColumns: "80px auto auto",
         gridTemplateAreas:
           "'avatar name name' 'avatar email phone' 'avatar message message'",
-        backgroundColor: "#F4F4F4",
-        transform: "scale(0.85)",
-        animation: "scaleUp 0.45s ease-in-out forwards"
+        backgroundColor: "#F4F4F4"
       }}
     >
       <img
