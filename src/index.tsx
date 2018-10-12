@@ -5,7 +5,7 @@ import * as faker from "faker";
 
 import VirtualList from "./VirtualList";
 
-export const MAX_PAGES = 50;
+export const MAX_PAGES = 100;
 export const MAX_CARDS_PER_PAGE = 3;
 
 const createDataSource = () =>
@@ -24,33 +24,10 @@ const createDataSource = () =>
 
 const dataSource = createDataSource();
 
-const getPrevPage = currentPage => {
-  if (!currentPage) {
-    return Promise.resolve(dataSource[0]);
-  } else {
-    const id = currentPage.id - 1 || dataSource.length;
-    return Promise.resolve(dataSource[id - 1]);
-  }
-};
-
-const getNextPage = currentPage => {
-  if (!currentPage) {
-    return Promise.resolve(dataSource[0]);
-  } else {
-    const id = currentPage.id === dataSource.length ? 0 : currentPage.id;
-    return Promise.resolve(dataSource[id]);
-  }
-};
-
 const rootElement = document.getElementById("root");
 ReactDOM.render(
   <VirtualList
-    getPageAfter={getNextPage}
-    getPageBefore={getPrevPage}
-    settings={{
-      debug: true,
-      startBottomUp: true
-    }}
+    items={dataSource}
   />,
   rootElement
 );

@@ -1,43 +1,4 @@
-/** https://github.com/codrops/GridLoadingEffects/blob/master/css/component.css **/
-@keyframes blink {
-  0% {
-    opacity: 0.6;
-  }
-  50% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0.6;
-  }
-}
-
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
     Arial, sans-serif;
-}
-
-#debug {
-  position: fixed;
-  display: inline-flex;
-  top: 25px;
-  left: 25px;
-  align-items: center;
-  background-color: rgba(0, 0, 0, 0.9);
-  color: white;
-  padding: 10px;
-}
-
-input[type="checkbox"],
-button {
-  margin: 0px 8px;
-}
-
-@-webkit-keyframes scaleUp {
-	0% { }
-	100% { -webkit-transform: scale(1); opacity: 1; }
-}
-
-@keyframes scaleUp {
-	0% { }
-	100% { -webkit-transform: scale(1); transform: scale(1); opacity: 1; }
 }

@@ -1,226 +1,108 @@
 import * as React from "react";
-import * as _ from "lodash";
 import "normalize.css/normalize.css";
 import "./styles.css";
-import { Buffer, Runway, Page, IPageProps, DebugPanel } from "./components";
-import { findDOMNode } from "react-dom";
-import { ViewPort } from "./Viewport";
+import { Page } from "./components";
 
-const getDelta = event => {
-  if (/edge/i.test(navigator.userAgent)) {
-    return event.deltaY * -1;
-  } else if (/chrome/i.test(navigator.userAgent)) {
-    return event.deltaY * -3;
-  } else if (/firefox/i.test(navigator.userAgent)) {
-    return event.deltaY * -3;
-  } else {
-    return 0;
-  }
-};
-
-export interface IVirtualListSettings {
-  startBottomUp: boolean;
-  maxPageBuffer: number;
-  isPagingEnabled: boolean;
-  debug: boolean;
+export interface IVirtualizedListRendererProps {
+  items: any[];
 }
 
-const defaultSettings: IVirtualListSettings = {
-  isPagingEnabled: true,
-  startBottomUp: false,
-  maxPageBuffer: 15,
-  debug: false
-};
-
-export interface IVirtualListProps {
-  getPageBefore: (currentPage?: IPageProps) => Promise<IPageProps | undefined>;
-  getPageAfter: (currentPage?: IPageProps) => Promise<IPageProps | undefined>;
-  style?: React.CSSProperties;
-  settings?: Partial<IVirtualListSettings>;
+export interface IVirtualizedListRendererState {
+  isRenderingItems: boolean;
+  itemsToRender: JSX.Element[];
+  renderedStartIndex: number;
+  renderedStopIndex: number;
 }
 
-export interface IVirtualListState {
-  pages: IPageProps[];
-  settings: IVirtualListSettings;
-}
-
-export default class VirtualList extends React.Component<
-  IVirtualListProps,
-  IVirtualListState
+export default class VirtualizedListRenderer extends React.Component<
+  IVirtualizedListRendererProps,
+  IVirtualizedListRendererState
 > {
-  private runwayY = 0;
-  private viewport: HTMLElement;
-  private viewportRect: ClientRect;
-  private runway: HTMLElement;
-  private previousBuffer: HTMLElement;
-  private nextBuffer: HTMLElement;
-  private bufferObserver: IntersectionObserver;
+  private viewport;
+  private renderBufferSize = 5;
+  private isVirtualized: boolean;
 
-  constructor(props) {
+  constructor(props: IVirtualizedListRendererProps) {
     super(props);
-    this.handleIntersection = this.handleIntersection.bind(this);
-    this.onWheel = this.onWheel.bind(this);
-    this.toggle = this.toggle.bind(this);
-    this.addPage = this.addPage.bind(this);
+    this.viewport = React.createRef();
+    this.isVirtualized = false;
     this.state = {
-      pages: [],
-      settings: { ...defaultSettings, ...this.props.settings }
+      itemsToRender: [],
+      renderedStopIndex: 0,
+      renderedStartIndex: 0,
+      isRenderingItems: false
     };
   }
 
   public componentDidMount() {
-    this.setup();
-  }
-
-  public componentWillUnmount() {
-    this.viewport.removeEventListener("wheel", this.onWheel);
-    this.bufferObserver.disconnect();
+    this.addMoreItems();
+    requestAnimationFrame(() => {
+      this.viewport.current.scrollTop = this.viewport.current.scrollHeight;
+    });
   }
 
   public render() {
-    const { pages } = this.state;
-    const direction = this.state.settings.startBottomUp
-      ? "bottom-up"
-      : "top-down";
+    if (this.state.isRenderingItems) {
+      requestAnimationFrame(() => {
+        this.setState({
+          isRenderingItems: false
+        });
+      });
+    }
 
     return (
-      <ViewPort
-        data-direction={direction}
-        element={ref => (this.viewport = ref)}
-      >
-        <Runway element={ref => (this.runway = ref)}>
-          <Buffer
-            name="previous"
-            element={ref => (this.previousBuffer = ref)}
+      <div
+        data-name="viewport"
+        ref={this.viewport}
+        onScroll={this.onScroll}
+        style={{
+          height: "100vh",
+          overflowY: "auto",
+        }}>
+        <div data-name="runway">
+          <div
+            data-name="buffer"
+            style={{
+              height: "300px",
+              background: "lightgray"
+            }}
           />
-          {pages.map(page => (
-            <Page key={page.id} {...page} />
-          ))}
-          <Buffer name="next" element={ref => (this.nextBuffer = ref)} />
-        </Runway>
-        {this.state.settings.debug ? (
-          <DebugPanel
-            addPage={this.addPage}
-            toggle={this.toggle}
-            settings={this.state.settings}
-          />
-        ) : null}
-      </ViewPort>
+          {this.state.itemsToRender}
+        </div>
+      </div>
     );
   }
 
-  private setup() {
-    if (!this.state.settings.startBottomUp) {
-      this.slideRunwayInPx(-this.nextBuffer.offsetHeight);
-    }
-    this.addBufferIntersectionObservers();
-    this.viewport.addEventListener("wheel", this.onWheel, { passive: true });
-    this.viewportRect = this.viewport.getBoundingClientRect();
-  }
-
-  private addBufferIntersectionObservers() {
-    this.bufferObserver = new IntersectionObserver(
-      entries => entries.forEach(this.handleIntersection),
-      {
-        root: this.viewport,
-        rootMargin: "0px",
-        threshold: _.range(0, 1.0, 0.01)
-      }
-    );
-    this.bufferObserver.observe(this.previousBuffer);
-    this.bufferObserver.observe(this.nextBuffer);
-  }
-
-  private onWheel(event: WheelEvent) {
-    const delta = getDelta(event);
-    const isGoingUp = delta > 0;
-    const threshold = 500;
-
-    // Optimize the number of times we need to check this
-    if (isGoingUp) {
-      const previousBufferBottom = this.previousBuffer.getBoundingClientRect()
-        .bottom;
-      if (previousBufferBottom - threshold > this.viewportRect.top) {
-        return;
-      }
-    } else {
-      const nextBufferTop = this.nextBuffer.getBoundingClientRect().top;
-      if (nextBufferTop + threshold < this.viewportRect.bottom) {
-        return;
-      }
-    }
-    this.slideRunwayInPx(delta);
-  }
-
-  private async handleIntersection(entry) {
-    const isScrollingUp = entry.target === this.previousBuffer;
-    const isIntersecting = entry.intersectionRatio > 0;
-    if (!isIntersecting || !this.state.settings.isPagingEnabled) {
-      return;
-    }
-    this.addPage(isScrollingUp);
-  }
-
-  private async addPage(isScrollingUp = false) {
-    const page = isScrollingUp
-      ? await this.props.getPageBefore(_.head(this.state.pages))
-      : await this.props.getPageAfter(_.last(this.state.pages));
-
-    if (!page) {
+  private onScroll = (event) => {
+    if (
+      this.state.isRenderingItems ||
+      event.target.scrollTop > 400
+    ) {
       return;
     }
 
-    let prunedElementHeight = 0;
-    if (!isScrollingUp) {
-      const prune = this.state.pages[this.state.settings.maxPageBuffer];
-      if (prune) {
-        const prunedElement: any = this.previousBuffer.nextElementSibling;
-        prunedElementHeight = prunedElement.offsetHeight;
-      }
+    this.addMoreItems();
+  }
+
+  private addMoreItems() {
+    let { renderedStopIndex, renderedStartIndex} = this.state;
+    const { items } = this.props;
+    renderedStopIndex += this.renderBufferSize;
+    const itemsToRender: any = [];
+
+    renderedStartIndex = this.isVirtualized ? Math.max(0, renderedStopIndex - 10) : renderedStartIndex;
+
+    for (let i = renderedStartIndex; i <= renderedStopIndex; i++) {
+        const page = items[i];
+        const item = <Page key={i} {...page} />;
+        itemsToRender.push(item);
     }
 
-    let pages: IPageProps[] = [];
-    if (isScrollingUp) {
-      const remainingPages = _.take(
-        this.state.pages,
-        this.state.settings.maxPageBuffer
-      );
-      pages = [page, ...remainingPages];
-    } else {
-      const remainingPages = _.takeRight(
-        this.state.pages,
-        this.state.settings.maxPageBuffer
-      );
-      pages = [...remainingPages, page];
-    }
-
-    this.setState({ pages }, () => {
-      this.slideRunwayToBuffer(isScrollingUp, prunedElementHeight);
+    this.setState({
+      itemsToRender: itemsToRender.reverse(),
+      renderedStopIndex,
+      renderedStartIndex,
+      isRenderingItems: true
     });
-  }
-
-  private slideRunwayToBuffer(
-    isGoingUp: boolean,
-    prunedElementHeight: number = 0
-  ) {
-    let delta = prunedElementHeight;
-    if (isGoingUp) {
-      const page: any = this.previousBuffer.nextElementSibling;
-      delta = -page.offsetHeight + prunedElementHeight;
-    }
-    this.slideRunwayInPx(delta);
-  }
-
-  private slideRunwayInPx(delta: number) {
-    this.runwayY = this.runwayY + delta;
-    requestAnimationFrame(() => {
-      this.runway.style.transform = `translate3d(0, ${this.runwayY}px, 0)`;
-    });
-  }
-
-  private toggle(setting) {
-    const settings = { ...this.state.settings };
-    settings[setting] = !settings[setting];
-    this.setState({ settings });
   }
 }
