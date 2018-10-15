@@ -1,3 +1,2 @@
 [config]
-command = npm run build
 project = build
