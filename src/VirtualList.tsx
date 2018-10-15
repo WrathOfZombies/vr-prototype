@@ -19,7 +19,7 @@ export default class VirtualizedListRenderer extends React.Component<
   IVirtualizedListRendererState
 > {
   private viewport;
-  private renderBufferSize = 5;
+  private renderBufferSize = 10;
   private isVirtualized: boolean;
 
   constructor(props: IVirtualizedListRendererProps) {
