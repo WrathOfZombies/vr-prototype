@@ -16,5 +16,27 @@ body {
 }
 
 #debug {
+  position: fixed;
+  display: flex;
+  flex-direction: column;
+  top: 25px;
+  left: 25px;
+  align-items: center;
+  background-color: rgba(0, 0, 0, 0.9);
+  color: white;
+  padding: 5px;
+}
 
+#debug div {
+  width: 100%;
+  display: flex;
+}
+
+#debug span {
+  flex: 1;
+  padding-right: 5px;
+}
+
+button {
+  margin: 5px 0 0;
 }

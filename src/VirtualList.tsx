@@ -100,28 +100,28 @@ export default class VirtualizedListRenderer extends React.Component<
     if (!element) {
       return;
     }
-    element.style.height = height;
+    element.style.height = height + "px";
   }
 }
 
 export const DebugPanel = ({ itemId, height, onValueChanged, changeHeight }) => (
   <div id="debug">
-    <label>
-      Item id:
-    <input
+    <div>
+      <span>Item id:</span>
+      <input
         type="text"
         value={itemId}
         onChange={e => onValueChanged(e, "itemId")}
       />
-    </label>
-    <label>
-      New Height:
+    </div>
+    <div>
+      <span>New Height:</span>
       <input
         type="text"
         value={height}
         onChange={e => onValueChanged(e, "height")}
       />
-    </label>
+    </div>
     <button onClick={e => changeHeight()}>Change Element Height</button>
   </div>
 );
