@@ -9,6 +9,8 @@ export interface IVirtualizedListRendererProps {
 
 export interface IVirtualizedListRendererState {
   itemsToRender: JSX.Element[];
+  itemId: string;
+  height: string;
 }
 
 const ITEMS_LENGTH = 50;
@@ -22,8 +24,12 @@ export default class VirtualizedListRenderer extends React.Component<
   constructor(props: IVirtualizedListRendererProps) {
     super(props);
     this.viewport = React.createRef();
+    this.onValueChanged = this.onValueChanged.bind(this);
+    this.changeHeight = this.changeHeight.bind(this);
     this.state = {
-      itemsToRender: []
+      itemsToRender: [],
+      itemId: "",
+      height: ""
     };
   }
 
@@ -33,6 +39,7 @@ export default class VirtualizedListRenderer extends React.Component<
 
   public render() {
     return (
+      <React.Fragment>
       <div
         data-name="viewport"
         ref={this.viewport}
@@ -44,6 +51,13 @@ export default class VirtualizedListRenderer extends React.Component<
           {this.state.itemsToRender}
         </div>
       </div>
+      <DebugPanel
+        itemId={this.state.itemId}
+        onValueChanged={this.onValueChanged}
+        height={this.state.height}
+        changeHeight={this.changeHeight}
+      />
+      </React.Fragment>
     );
   }
 
@@ -61,11 +75,54 @@ export default class VirtualizedListRenderer extends React.Component<
   }
 
   private getItem(index: number): JSX.Element {
-    const id = `item-${index}`;
     return (
-      <div className="item" id={id}>
+      <div className="item" id={this.getElementId(index)}>
         Index: {index}
       </div>
     );
   }
+
+  private onValueChanged(event, propName: string) {
+    const state = { ...this.state };
+    state[propName] = event.target.value;
+    this.setState(state);
+  }
+
+  private getElementId(index) {
+    return `item-${index}`;
+  }
+
+  private changeHeight() {
+    const { itemId, height } = this.state;
+    const elementId = this.getElementId(itemId);
+    const element = document.getElementById(elementId);
+
+    if (!element) {
+      return;
+    }
+    element.style.height = height;
+  }
 }
+
+export const DebugPanel = ({ itemId, height, onValueChanged, changeHeight }) => (
+  <div id="debug">
+    <label>
+    <input
+        type="text"
+        value={itemId}
+        defaultValue={"element number to change height"}
+        onChange={e => onValueChanged(e, "itemId")}
+      />
+    </label>
+    <label>
+      <input
+        type="text"
+        value={height}
+        defaultValue={"# of pixels to change height"}
+        onChange={e => onValueChanged(e, "height")}
+      />
+    </label>
+    <button onClick={e => changeHeight(true)}>Grow element</button>
+    <button onClick={e => changeHeight(false)}>Shrink element</button>
+  </div>
+);
