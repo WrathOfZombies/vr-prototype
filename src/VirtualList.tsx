@@ -60,13 +60,6 @@ export default class VirtualizedListRenderer extends React.Component<
           overflowY: "auto",
         }}>
         <div data-name="runway">
-          <div
-            data-name="buffer"
-            style={{
-              height: "300px",
-              background: "lightgray"
-            }}
-          />
           {this.state.itemsToRender}
         </div>
       </div>
@@ -85,14 +78,12 @@ export default class VirtualizedListRenderer extends React.Component<
   }
 
   private addMoreItems() {
-    let { renderedStopIndex, renderedStartIndex} = this.state;
+    let { renderedStopIndex } = this.state;
     const { items } = this.props;
     renderedStopIndex += this.renderBufferSize;
     const itemsToRender: any = [];
 
-    renderedStartIndex = this.isVirtualized ? Math.max(0, renderedStopIndex - 10) : renderedStartIndex;
-
-    for (let i = renderedStartIndex; i <= renderedStopIndex; i++) {
+    for (let i = 0; i <= renderedStopIndex; i++) {
         const page = items[i];
         const item = <Page key={i} {...page} />;
         itemsToRender.push(item);
@@ -101,7 +92,6 @@ export default class VirtualizedListRenderer extends React.Component<
     this.setState({
       itemsToRender: itemsToRender.reverse(),
       renderedStopIndex,
-      renderedStartIndex,
       isRenderingItems: true
     });
   }
