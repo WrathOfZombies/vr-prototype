@@ -76,7 +76,7 @@ export default class VirtualizedListRenderer extends React.Component<
 
   private getItem(index: number): JSX.Element {
     return (
-      <div className="item" id={this.getElementId(index)}>
+      <div key={index} className="item" id={this.getElementId(index)}>
         Index: {index}
       </div>
     );
@@ -107,22 +107,21 @@ export default class VirtualizedListRenderer extends React.Component<
 export const DebugPanel = ({ itemId, height, onValueChanged, changeHeight }) => (
   <div id="debug">
     <label>
+      Item id:
     <input
         type="text"
         value={itemId}
-        defaultValue={"element number to change height"}
         onChange={e => onValueChanged(e, "itemId")}
       />
     </label>
     <label>
+      New Height:
       <input
         type="text"
         value={height}
-        defaultValue={"# of pixels to change height"}
         onChange={e => onValueChanged(e, "height")}
       />
     </label>
-    <button onClick={e => changeHeight(true)}>Grow element</button>
-    <button onClick={e => changeHeight(false)}>Shrink element</button>
+    <button onClick={e => changeHeight()}>Change Element Height</button>
   </div>
 );
