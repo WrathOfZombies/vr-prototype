@@ -2,3 +2,15 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
     Arial, sans-serif;
 }
+
+.item {
+  height: 100px;
+  background: lightblue;
+  padding: 10px;
+  text-align: center;
+  margin: 0 100px;
+}
+
+.item:nth-child(even) {
+  background: lightcoral;
+}

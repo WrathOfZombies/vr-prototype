@@ -8,53 +8,34 @@ export interface IVirtualizedListRendererProps {
 }
 
 export interface IVirtualizedListRendererState {
-  isRenderingItems: boolean;
   itemsToRender: JSX.Element[];
-  renderedStartIndex: number;
-  renderedStopIndex: number;
 }
+
+const ITEMS_LENGTH = 50;
 
 export default class VirtualizedListRenderer extends React.Component<
   IVirtualizedListRendererProps,
   IVirtualizedListRendererState
 > {
   private viewport;
-  private renderBufferSize = 10;
-  private isVirtualized: boolean;
 
   constructor(props: IVirtualizedListRendererProps) {
     super(props);
     this.viewport = React.createRef();
-    this.isVirtualized = false;
     this.state = {
-      itemsToRender: [],
-      renderedStopIndex: 0,
-      renderedStartIndex: 0,
-      isRenderingItems: false
+      itemsToRender: []
     };
   }
 
   public componentDidMount() {
-    this.addMoreItems();
-    requestAnimationFrame(() => {
-      this.viewport.current.scrollTop = this.viewport.current.scrollHeight;
-    });
+    this.addItems();
   }
 
   public render() {
-    if (this.state.isRenderingItems) {
-      requestAnimationFrame(() => {
-        this.setState({
-          isRenderingItems: false
-        });
-      });
-    }
-
     return (
       <div
         data-name="viewport"
         ref={this.viewport}
-        onScroll={this.onScroll}
         style={{
           height: "100vh",
           overflowY: "auto",
@@ -66,33 +47,25 @@ export default class VirtualizedListRenderer extends React.Component<
     );
   }
 
-  private onScroll = (event) => {
-    if (
-      this.state.isRenderingItems ||
-      event.target.scrollTop > 400
-    ) {
-      return;
-    }
-
-    this.addMoreItems();
-  }
-
-  private addMoreItems() {
-    let { renderedStopIndex } = this.state;
-    const { items } = this.props;
-    renderedStopIndex += this.renderBufferSize;
+  private addItems() {
     const itemsToRender: any = [];
 
-    for (let i = 0; i <= renderedStopIndex; i++) {
-        const page = items[i];
-        const item = <Page key={i} {...page} />;
+    for (let i = 0; i < ITEMS_LENGTH; i++) {
+        const item = this.getItem(i);
         itemsToRender.push(item);
     }
 
     this.setState({
       itemsToRender: itemsToRender.reverse(),
-      renderedStopIndex,
-      isRenderingItems: true
     });
+  }
+
+  private getItem(index: number): JSX.Element {
+    const id = `item-${index}`;
+    return (
+      <div className="item" id={id}>
+        Index: {index}
+      </div>
+    );
   }
 }
