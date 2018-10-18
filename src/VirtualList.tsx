@@ -1,6 +1,7 @@
 import * as React from "react";
 import "normalize.css/normalize.css";
 import "./styles.css";
+import * as _ from "lodash";
 import { Page } from "./components";
 
 export interface IVirtualizedListRendererProps {
@@ -20,12 +21,19 @@ export default class VirtualizedListRenderer extends React.Component<
   IVirtualizedListRendererState
 > {
   private viewport;
+  private elementRefs;
+  private elementsObserver: IntersectionObserver;
+  private currentAnchor;
+  private hasAddedObserver: boolean;
 
   constructor(props: IVirtualizedListRendererProps) {
     super(props);
-    this.viewport = React.createRef();
+    this.elementRefs = {};
+    this.hasAddedObserver = false;
     this.onValueChanged = this.onValueChanged.bind(this);
     this.changeHeight = this.changeHeight.bind(this);
+    this.saveRef = this.saveRef.bind(this);
+    this.handleIntersection = this.handleIntersection.bind(this);
     this.state = {
       itemsToRender: [],
       itemId: "",
@@ -37,12 +45,20 @@ export default class VirtualizedListRenderer extends React.Component<
     this.addItems();
   }
 
+  public componentWillUnmount() {
+    this.elementsObserver.disconnect();
+  }
+
+  public componentDidUpdate() {
+    this.addIntersectionObservers();
+  }
+
   public render() {
     return (
       <React.Fragment>
       <div
         data-name="viewport"
-        ref={this.viewport}
+        ref={ref => (this.viewport = ref)}
         style={{
           height: "100vh",
           overflowY: "auto",
@@ -76,11 +92,50 @@ export default class VirtualizedListRenderer extends React.Component<
 
   private getItem(index: number): JSX.Element {
     return (
-      <div key={index} className="item" id={this.getElementId(index)}>
+      <div key={index} className="item" id={this.getElementId(index)} ref={ref => this.saveRef(index, ref)}>
         Index: {index}
       </div>
     );
   }
+
+  private saveRef(index, ref) {
+    this.elementRefs[index] = ref;
+  }
+
+  private addIntersectionObservers() {
+    if (this.hasAddedObserver || Object.keys(this.elementRefs).length !== ITEMS_LENGTH) {
+      return;
+    }
+    this.hasAddedObserver = true;
+
+    this.elementsObserver = new IntersectionObserver(
+      entries => entries.forEach(this.handleIntersection),
+      {
+        root: this.viewport,
+        rootMargin: "0px",
+        threshold: _.range(0, 1.0, 0.01)
+      }
+    );
+
+    // observe each element in list
+    _.each(this.elementRefs, element => {
+      this.elementsObserver.observe(element);
+    });
+  }
+
+  private handleIntersection(entry: IntersectionObserverEntry) {
+    if (this.isIntersectingTopOfViewport(entry) && this.currentAnchor !== entry.target) {
+      this.currentAnchor = entry.target;
+      console.log(`currentAnchor is: ${this.currentAnchor.id}`);
+    }
+  }
+
+  private isIntersectingTopOfViewport(entry: IntersectionObserverEntry) {
+    return entry.intersectionRatio > 0 &&
+      entry.boundingClientRect.top < entry.rootBounds.top &&
+      entry.boundingClientRect.bottom > entry.rootBounds.top;
+  }
+
 
   private onValueChanged(event, propName: string) {
     const state = { ...this.state };
