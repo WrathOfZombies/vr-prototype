@@ -12,6 +12,7 @@ export interface IVirtualizedListRendererState {
   itemsToRender: JSX.Element[];
   itemId: string;
   height: string;
+  currentAnchorId: string;
 }
 
 const ITEMS_LENGTH = 50;
@@ -37,7 +38,8 @@ export default class VirtualizedListRenderer extends React.Component<
     this.state = {
       itemsToRender: [],
       itemId: "",
-      height: ""
+      height: "",
+      currentAnchorId: ""
     };
   }
 
@@ -72,6 +74,7 @@ export default class VirtualizedListRenderer extends React.Component<
         onValueChanged={this.onValueChanged}
         height={this.state.height}
         changeHeight={this.changeHeight}
+        currentAnchor={this.state.currentAnchorId}
       />
       </React.Fragment>
     );
@@ -126,7 +129,9 @@ export default class VirtualizedListRenderer extends React.Component<
   private handleIntersection(entry: IntersectionObserverEntry) {
     if (this.isIntersectingTopOfViewport(entry) && this.currentAnchor !== entry.target) {
       this.currentAnchor = entry.target;
-      console.log(`currentAnchor is: ${this.currentAnchor.id}`);
+      this.setState({
+        currentAnchorId: this.currentAnchor.id
+      });
     }
   }
 
@@ -159,7 +164,7 @@ export default class VirtualizedListRenderer extends React.Component<
   }
 }
 
-export const DebugPanel = ({ itemId, height, onValueChanged, changeHeight }) => (
+export const DebugPanel = ({ itemId, height, onValueChanged, changeHeight, currentAnchor }) => (
   <div id="debug">
     <div>
       <span>Item id:</span>
@@ -178,5 +183,8 @@ export const DebugPanel = ({ itemId, height, onValueChanged, changeHeight }) => 
       />
     </div>
     <button onClick={e => changeHeight()}>Change Element Height</button>
+    <div>
+      <span>Current Anchor: {currentAnchor}</span>
+    </div>
   </div>
 );
