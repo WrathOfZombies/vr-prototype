@@ -24,6 +24,7 @@ export default class VirtualizedListRenderer extends React.Component<
   private viewport;
   private elementRefs;
   private elementsObserver: IntersectionObserver;
+  private mutationObserver: MutationObserver;
   private currentAnchor;
   private hasAddedObserver: boolean;
 
@@ -45,10 +46,12 @@ export default class VirtualizedListRenderer extends React.Component<
 
   public componentDidMount() {
     this.addItems();
+    this.addMutationObserver();
   }
 
   public componentWillUnmount() {
     this.elementsObserver.disconnect();
+    this.mutationObserver.disconnect();
   }
 
   public componentDidUpdate() {
@@ -103,6 +106,20 @@ export default class VirtualizedListRenderer extends React.Component<
 
   private saveRef(index, ref) {
     this.elementRefs[index] = ref;
+  }
+
+  private addMutationObserver() {
+    this.mutationObserver = new MutationObserver(this.handleAnchorMutations);
+    this.mutationObserver.observe(this.viewport, {
+      attributes: true,
+      attributeOldValue: true,
+      subtree: true,
+      childList: true
+    });
+  }
+
+  private handleAnchorMutations(mutations) {
+    console.log(`mutations happened ${mutations.length}`);
   }
 
   private addIntersectionObservers() {
