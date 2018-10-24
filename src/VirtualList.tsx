@@ -2,7 +2,8 @@ import * as React from "react";
 import "normalize.css/normalize.css";
 import "./styles.css";
 import * as _ from "lodash";
-import { Page } from "./components";
+import ListItem from "./ListItem";
+import ResizeObserver from "./resizeObserver";
 
 export interface IVirtualizedListRendererProps {
   items: any[];
@@ -15,23 +16,30 @@ export interface IVirtualizedListRendererState {
   currentAnchorId: string;
 }
 
-const ITEMS_LENGTH = 50;
+const ITEMS_BUFFER = 20;
 
 export default class VirtualizedListRenderer extends React.Component<
   IVirtualizedListRendererProps,
   IVirtualizedListRendererState
 > {
   private viewport;
+  private runwayArea;
   private elementRefs;
   private elementsObserver: IntersectionObserver;
+  private resizeObserver;
   private mutationObserver: MutationObserver;
   private currentAnchor;
-  private hasAddedObserver: boolean;
+  private isAnchorBeingSelected: boolean;
+  private isLoadingMore: boolean;
+
+  private pauseAnchorSelection = _.debounce(
+    () => (this.isAnchorBeingSelected = false),
+    10
+  );
 
   constructor(props: IVirtualizedListRendererProps) {
     super(props);
     this.elementRefs = {};
-    this.hasAddedObserver = false;
     this.onValueChanged = this.onValueChanged.bind(this);
     this.changeHeight = this.changeHeight.bind(this);
     this.saveRef = this.saveRef.bind(this);
@@ -45,8 +53,14 @@ export default class VirtualizedListRenderer extends React.Component<
   }
 
   public componentDidMount() {
-    this.addItems();
-    this.addMutationObserver();
+    this.createIntersectionObserver();
+    this.createResizeObserver();
+    this.addMoreItems();
+    requestAnimationFrame(() => {
+      this.isAnchorBeingSelected = true;
+      this.viewport.scrollTop = this.viewport.scrollHeight;
+      this.pauseAnchorSelection();
+    });
   }
 
   public componentWillUnmount() {
@@ -54,8 +68,10 @@ export default class VirtualizedListRenderer extends React.Component<
     this.mutationObserver.disconnect();
   }
 
-  public componentDidUpdate() {
-    this.addIntersectionObservers();
+  public componentDidUpdate(prevProps: IVirtualizedListRendererProps, prevState: IVirtualizedListRendererState) {
+    if (this.state.itemsToRender.length !== prevState.itemsToRender.length && this.isLoadingMore) {
+      this.isLoadingMore = false;
+    }
   }
 
   public render() {
@@ -64,12 +80,25 @@ export default class VirtualizedListRenderer extends React.Component<
       <div
         data-name="viewport"
         ref={ref => (this.viewport = ref)}
+        onScroll={this.onScroll}
         style={{
           height: "100vh",
           overflowY: "auto",
-        }}>
-        <div data-name="runway">
-          {this.state.itemsToRender}
+          transform: "translate3d(0,0,0)",
+          willChange: "scroll-position",
+          backfaceVisibility: "hidden",
+          overscrollBehavior: "none",
+          overflowAnchor: "none"
+      }}>
+        <div data-name="runway"
+          ref={ref => (this.runwayArea = ref)}
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            transformStyle: "preserve-3d",
+            position: "relative"
+          }}>
+            {this.state.itemsToRender}
         </div>
       </div>
       <DebugPanel
@@ -83,24 +112,34 @@ export default class VirtualizedListRenderer extends React.Component<
     );
   }
 
-  private addItems() {
-    const itemsToRender: any = [];
+  private onScroll = (event) => {
+    this.isAnchorBeingSelected = true;
+    // console.log("Scroll happened");
+    this.pauseAnchorSelection();
+    if (event.target.scrollTop < 500 && !this.isLoadingMore) {
+      this.addMoreItems();
+    }
+  }
 
-    for (let i = 0; i < ITEMS_LENGTH; i++) {
-        const item = this.getItem(i);
-        itemsToRender.push(item);
+  private addMoreItems() {
+    this.isLoadingMore = true;
+    const { itemsToRender } = this.state;
+    const length = itemsToRender.length;
+    const newItems: any = [];
+
+    for (let i = length; i < length + ITEMS_BUFFER; i++) {
+      const item = this.getItem(i);
+      newItems.push(item);
     }
 
     this.setState({
-      itemsToRender: itemsToRender.reverse(),
+      itemsToRender: newItems.reverse().concat(itemsToRender)
     });
   }
 
   private getItem(index: number): JSX.Element {
     return (
-      <div key={index} className="item" id={this.getElementId(index)} ref={ref => this.saveRef(index, ref)}>
-        Index: {index}
-      </div>
+      <ListItem key={index} index={index} id={this.getElementId(index)} observer={this.elementsObserver} />
     );
   }
 
@@ -108,26 +147,42 @@ export default class VirtualizedListRenderer extends React.Component<
     this.elementRefs[index] = ref;
   }
 
-  private addMutationObserver() {
-    this.mutationObserver = new MutationObserver(this.handleAnchorMutations);
-    this.mutationObserver.observe(this.viewport, {
-      attributes: true,
-      attributeOldValue: true,
-      subtree: true,
-      childList: true
-    });
+  private createResizeObserver() {
+    this.resizeObserver = ResizeObserver(this.updateAnchorPosition);
+    this.resizeObserver.observe(this.runwayArea);
   }
 
-  private handleAnchorMutations(mutations) {
-    console.log(`mutations happened ${mutations.length}`);
-  }
-
-  private addIntersectionObservers() {
-    if (this.hasAddedObserver || Object.keys(this.elementRefs).length !== ITEMS_LENGTH) {
+  private updateAnchorPosition = () => {
+    if (!this.currentAnchor) {
       return;
     }
-    this.hasAddedObserver = true;
 
+    const newBoundingClientRect = this.currentAnchor.target.getBoundingClientRect();
+
+    const delta =
+      newBoundingClientRect.top -
+      this.currentAnchor.boundingClientRect.top;
+
+    // console.log(
+    //   newBoundingClientRect,
+    //   this.currentAnchor.boundingClientRect
+    // );
+    console.debug("Scrolling you to:", delta);
+    this.adjustScroll(delta);
+  }
+
+  private adjustScroll(delta) {
+    if (!this.viewport) {
+      return;
+    }
+    if (this.viewport.scrollBy) {
+      this.viewport.scrollBy(0, delta);
+    } else {
+      this.viewport.scrollTop += delta;
+    }
+  }
+
+  private createIntersectionObserver() {
     this.elementsObserver = new IntersectionObserver(
       entries => entries.forEach(this.handleIntersection),
       {
@@ -136,24 +191,20 @@ export default class VirtualizedListRenderer extends React.Component<
         threshold: _.range(0, 1.0, 0.01)
       }
     );
-
-    // observe each element in list
-    _.each(this.elementRefs, element => {
-      this.elementsObserver.observe(element);
-    });
   }
 
   private handleIntersection(entry: IntersectionObserverEntry) {
-    if (this.isIntersectingTopOfViewport(entry) && this.currentAnchor !== entry.target) {
-      this.currentAnchor = entry.target;
+    if (this.shouldSelectAnchor(entry)) {
+      this.currentAnchor = entry;
       this.setState({
-        currentAnchorId: this.currentAnchor.id
+        currentAnchorId: this.currentAnchor.target.id
       });
     }
   }
 
-  private isIntersectingTopOfViewport(entry: IntersectionObserverEntry) {
-    return entry.intersectionRatio > 0 &&
+  private shouldSelectAnchor(entry: IntersectionObserverEntry) {
+    return this.isAnchorBeingSelected &&
+      entry.intersectionRatio > 0 &&
       entry.boundingClientRect.top < entry.rootBounds.top &&
       entry.boundingClientRect.bottom > entry.rootBounds.top;
   }
